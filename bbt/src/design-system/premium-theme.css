@@ -1,0 +1,110 @@
+/**
+ * PREMIUM DESIGN SYSTEM — Tailwind theme additions
+ * ============================================================
+ * This mirrors tokens.ts as real CSS custom properties, namespaced under
+ * `premium-*` so Tailwind v4 generates ergonomic utility classes
+ * (bg-premium-surface, text-premium-gold, rounded-premium-card, etc.)
+ * without colliding with or altering a single existing token in index.css.
+ *
+ * Nothing in the live app reads these variables yet — importing this
+ * file makes the tokens available, it does not apply them anywhere.
+ * A future redesign pass adopts them screen by screen.
+ *
+ * NOTE: the Sora font is imported from index.css itself, not from here —
+ * CSS requires @import statements to precede all other rules in a
+ * stylesheet, and this file gets nested inside index.css's own imports,
+ * so a font @import placed here would land too late in the cascade to
+ * be valid.
+ */
+
+@theme {
+  --font-premium: "Sora", ui-sans-serif, system-ui, sans-serif;
+
+  /* Backgrounds */
+  --color-premium-bg: #111315;
+  --color-premium-surface: #181B1F;
+  --color-premium-elevated: #20242A;
+  --color-premium-overlay: #20242A;
+
+  /* Borders */
+  --color-premium-border-subtle: #23272D;
+  --color-premium-border: #2C3138;
+  --color-premium-border-strong: #383F48;
+
+  /* Gold accent — sparing use only, per design rules */
+  --color-premium-gold-100: #E9D28A;
+  --color-premium-gold-400: #D4AF37;
+  --color-premium-gold-600: #A8842A;
+
+  /* Money — always green */
+  --color-premium-green-300: #6FE3A6;
+  --color-premium-green-500: #22C55E;
+  --color-premium-green-700: #16803F;
+
+  /* Warning / Error */
+  --color-premium-amber-400: #E0A458;
+  --color-premium-amber-600: #B87F36;
+  --color-premium-red-400: #EF4444;
+  --color-premium-red-600: #C23636;
+
+  /* Information — used sparingly as the third accent alongside gold/green */
+  --color-premium-info-400: #60A5FA;
+
+  /* Text */
+  --color-premium-text: #F5F7FA;
+  --color-premium-text-secondary: #9EA6B2;
+  --color-premium-text-disabled: #5B626C;
+  --color-premium-text-inverse: #111315;
+
+  /* Radius */
+  --radius-premium-sm: 6px;
+  --radius-premium-md: 10px;
+  --radius-premium-lg: 16px;
+  --radius-premium-xl: 24px;
+  --radius-premium-pill: 999px;
+  --radius-premium-card: 16px;
+  --radius-premium-dialog: 24px;
+  --radius-premium-button: 10px;
+
+  /* Spacing scale — use ONLY these values in any premium-system layout */
+  --spacing-premium-xs: 4px;
+  --spacing-premium-sm: 8px;
+  --spacing-premium-md: 12px;
+  --spacing-premium-lg: 16px;
+  --spacing-premium-xl: 20px;
+  --spacing-premium-2xl: 24px;
+  --spacing-premium-3xl: 32px;
+  --spacing-premium-4xl: 40px;
+  --spacing-premium-5xl: 48px;
+}
+
+@layer utilities {
+  /* Shadows — refined to "very subtle, almost invisible" per the Header
+     brief; luxury surfaces read via elevation of surface color, not shadow weight */
+  .shadow-premium-card { box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28); }
+  .shadow-premium-floating { box-shadow: 0 4px 16px rgba(0, 0, 0, 0.32); }
+  .shadow-premium-dialog { box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4); }
+  .shadow-premium-button { box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25); }
+  .shadow-premium-hover { box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); }
+  .shadow-premium-pressed { box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.35); }
+  .shadow-premium-glow-gold { box-shadow: 0 0 20px rgba(212, 175, 55, 0.18); }
+  .shadow-premium-glow-green { box-shadow: 0 0 18px rgba(34, 197, 94, 0.20); }
+
+  /* Typography roles — one declaration per role, matching tokens.ts
+     exactly, so "premium-title" always means the same thing everywhere. */
+  .text-premium-display { font-family: var(--font-premium); font-weight: 700; font-size: 32px; line-height: 1.1; letter-spacing: -0.02em; }
+  .text-premium-heading { font-family: var(--font-premium); font-weight: 700; font-size: 24px; line-height: 1.2; letter-spacing: -0.01em; }
+  .text-premium-title { font-family: var(--font-premium); font-weight: 600; font-size: 18px; line-height: 1.3; letter-spacing: 0; }
+  .text-premium-subtitle { font-family: var(--font-premium); font-weight: 500; font-size: 14px; line-height: 1.4; letter-spacing: 0; }
+  .text-premium-body { font-family: var(--font-premium); font-weight: 400; font-size: 14px; line-height: 1.6; letter-spacing: 0; }
+  .text-premium-caption { font-family: var(--font-premium); font-weight: 600; font-size: 11px; line-height: 1.4; letter-spacing: 0.06em; text-transform: uppercase; }
+  .text-premium-button { font-family: var(--font-premium); font-weight: 600; font-size: 14px; line-height: 1; letter-spacing: 0.03em; text-transform: uppercase; }
+  .text-premium-label { font-family: var(--font-premium); font-weight: 700; font-size: 10px; line-height: 1.2; letter-spacing: 0.08em; text-transform: uppercase; }
+  .text-premium-number { font-family: var(--font-premium); font-weight: 700; font-size: 20px; line-height: 1; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+  .text-premium-money { font-family: var(--font-premium); font-weight: 700; font-size: 22px; line-height: 1; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; color: var(--color-premium-green-500); }
+
+  /* Animation presets — durations/easings named to match tokens.ts */
+  .transition-premium-standard { transition-duration: 220ms; transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1); }
+  .transition-premium-fast { transition-duration: 150ms; transition-timing-function: cubic-bezier(0.4, 0, 1, 1); }
+  .transition-premium-settle { transition-duration: 350ms; transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1); }
+}
