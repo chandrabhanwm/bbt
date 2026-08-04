@@ -17,6 +17,27 @@ export interface Business {
    *  Unset for every business today — leaving upgrades uncapped exactly
    *  as before. Reserved for a future slice. */
   maxLevel?: number;
+  /** Strategy-layer fields — set only for businesses using the new
+   *  fixed 6-level + synergy system (all 10 districts, per the verified
+   *  spec). When present, `levelCosts`/`levelIncomes` are authoritative
+   *  and `cost`/`profitPerMin`/`costMultiplier` are derived from them
+   *  rather than the old continuous growth-factor formula. Absent means
+   *  "use the legacy formula" — kept optional so nothing breaks if a
+   *  business is ever added without strategy-layer data. */
+  levelCosts?: number[]; // exactly 6 entries: [buyCost, L1→L2, L2→L3, L3→L4, L4→L5, L5→L6]
+  levelIncomes?: number[]; // exactly 6 entries: income/min at L1..L6, BEFORE synergy bonuses
+}
+
+/** A single synergy rule within one district. `requiresIds` are business
+ *  ids that must ALL be owned (level >= 1) for this bonus to apply to
+ *  `targetId`. Never crosses district boundaries — requiresIds and
+ *  targetId always refer to businesses within the same district. */
+export interface SynergyRule {
+  id: string;
+  name: string;
+  requiresIds: string[];
+  targetId: string;
+  bonusPercent: number; // e.g. 0.25 for +25%
 }
 
 /** A single Daily Reward Card. The value is generated at reset time (not
@@ -129,6 +150,64 @@ export interface PlayerStats {
    *  reset for — comparing against today's date is what triggers that
    *  reset. */
   dailyUpgradePointsDate: string;
+  /** How many times the pool's "Double it?" bonus has been used today —
+   *  capped per progressionConfig.doubleClaimCapPerDay. Reduced from
+   *  unlimited uses at +100% specifically because unlimited doubling
+   *  was found, via real player data, to be a major contributor to
+   *  runaway economy growth. Resets at real local midnight, same
+   *  pattern as dailyUpgradePointsCount above. */
+  dailyDoubleClaimCount: number;
+  /** The calendar day (YYYY-MM-DD) dailyDoubleClaimCount was last reset
+   *  for — comparing against today's date is what triggers that reset. */
+  dailyDoubleClaimDate: string;
+
+  /** Cumulative seconds the app has been actively open — incremented
+   *  once per second alongside the existing live pool tick, so it's
+   *  measuring genuine active time, not wall-clock time the app was
+   *  merely installed. Synced to the leaderboard doc as "Total Play
+   *  Time" for the requested per-player analytics view. */
+  totalPlayTimeSeconds: number;
+  /** How many times this player has completed watching a simulated ad
+   *  (Header double-claim, Portfolio double-claim, or a scratch card) —
+   *  a genuine count, separate from the Firebase Analytics ad_watched
+   *  event, which only shows aggregate totals across all players, not
+   *  a per-player breakdown. */
+  adsWatchedCount: number;
+  /** How many times this player has bought or upgraded a business —
+   *  every successful tap on a business card, first purchase or a
+   *  further level, each counts once. */
+  businessesBoughtCount: number;
+  /** How many times this player has successfully claimed the Profit
+   *  pool (Header or Portfolio, either one) — separate from how many
+   *  times they've doubled it, which is tracked by
+   *  dailyDoubleClaimCount above but resets daily, while this one
+   *  never resets. */
+  poolClaimsCount: number;
+
+  /** Whether this player has made at least one pool claim since the
+   *  2-hour cooldown was introduced. Defaults to false for every save,
+   *  new or existing — an existing player's old lastPoolClaimAt could
+   *  otherwise unexpectedly lock them out for up to 2 hours the moment
+   *  this update deploys, even though they never agreed to or expected
+   *  this new restriction. The very first claim after this feature
+   *  exists always succeeds regardless of that old timestamp; the
+   *  cooldown only starts counting from that point onward. */
+  hasClaimedSincePoolCooldown: boolean;
+
+  /** Which points-leaderboard season this player's weeklyPoints belong
+   *  to — compared against progressionConfig.pointsSeasonId. Mismatch
+   *  means a manual reset was triggered since this player last played;
+   *  their points reset to zero and this catches up to match. The
+   *  points system itself now runs forever with no automatic reset —
+   *  this is the only way points ever go back to zero. */
+  pointsSeasonId: number;
+
+  /** How many referral bonuses this player has RECEIVED as a referrer
+   *  today (someone they invited signed up) — capped at 10/day per the
+   *  agreed limit. Separate from how many people they've referred
+   *  in total, which isn't capped anywhere. */
+  dailyReferralClaimsCount: number;
+  dailyReferralClaimsDate: string;
 }
 
 // LeaderboardUser removed — the old fictional-rival leaderboard is gone,

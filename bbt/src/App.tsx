@@ -9,7 +9,7 @@ import { Landmark, Lock } from 'lucide-react';
 import { Business, PlayerStats, RewardCard } from './types';
 import { Header } from './components/Header';
 import { DailyRewardCards } from './components/DailyRewardCards';
-import { DailyGoalCard } from './components/DailyGoalCard';
+import { ShareEarnCard } from './components/ShareEarnCard';
 import { BusinessGridView } from './components/BusinessGridView';
 import { FooterTipBar } from './components/FooterTipBar';
 import { ShopDetailSheet } from './components/ShopDetailSheet';
@@ -20,11 +20,10 @@ import { PortfolioScreen } from './components/PortfolioScreen';
 import { SettingsScreen } from './components/SettingsScreen';
 import { Confetti, CoinBurst, CoinFlight } from './components/FX';
 import { DistrictSummaryCard } from './components/DistrictSummaryCard';
-import { buildBusinessesForDistrict, districtEconomies } from './data/districtBusinesses';
+import { buildBusinessesForDistrict, districtEconomies, getDistrictTotalCost } from './data/districtBusinesses';
 import { bastiCity, getDistrict } from './data/cityMapData';
 import { DistrictProvider, useDistrict } from './context/DistrictContext';
 import { getDistrictProgress, isDistrictCompleted, getDistrictCompletionReward, getEmpireTotalInvested } from './utils/districtProgress';
-import { calculateTieredProfit } from './utils/profitCurve';
 import { generateDailyGoal } from './utils/dailyGoal';
 import { getLegacyIncomeMultiplier } from './utils/legacy';
 import { subscribeToAuthChanges, auth, signOutUser, checkRedirectResult, logAnalyticsEvent } from './firebase/config';
@@ -40,10 +39,10 @@ import { useNewsTicker } from './hooks/useNewsTicker';
 import { useDistrictPreview } from './hooks/useDistrictPreview';
 import { useAccountActions } from './hooks/useAccountActions';
 import { useSessionEnforcement } from './hooks/useSessionEnforcement';
-import { getCooldownRemainingSeconds, CLAIM_COOLDOWN_MS } from './utils/cooldown';
-import { applyContestPoints } from './utils/weeklyContest';
+import { getCooldownRemainingSeconds, CLAIM_COOLDOWN_MS, formatCooldownClock } from './utils/cooldown';
+import { applyContestPoints, todayDateString, localDateStringOf } from './utils/weeklyContest';
 import { CountdownClock } from './components/CountdownClock';
-import { progressionConfig } from './config/progressionConfig';
+import { progressionConfig, CURRENT_SAVE_VERSION } from './config/progressionConfig';
 import { playClick, playLevelUp, playUnlock } from './utils/audio';
 import { formatCash } from './utils/formatCash';
 
@@ -63,7 +62,6 @@ import { formatCash } from './utils/formatCash';
 // ceiling specifically so it still feels distinct even without hitting
 // the jackpot. Which position gets which tier is reshuffled every reset,
 // so the "exciting" card isn't always sitting in the same slot.
-const CARD_RESET_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
 function generateRewardCard(tier: 'small' | 'medium' | 'rare'): RewardCard {
   let value: number;
@@ -105,6 +103,12 @@ function seedAllDistricts(): Record<string, Business[]> {
 function AppInner({ currentUid }: { currentUid: string }) {
   const { currentDistrictId, setCurrentDistrict, isDistrictUnlocked, unlockDistrict, isDistrictRewarded, markDistrictRewarded, resetDistricts, restoreDistrictState, unlockedDistrictsMap, rewardedDistrictsMap } = useDistrict();
   const currentDistrictMeta = getDistrict(bastiCity, currentDistrictId);
+  // The pool tick's own useEffect only runs once (empty deps), so it needs
+  // a ref rather than reading currentDistrictId directly, or it would
+  // permanently use whichever district was current when the app first
+  // mounted, not wherever the player has since navigated to.
+  const currentDistrictIdRef = useRef(currentDistrictId);
+  useEffect(() => { currentDistrictIdRef.current = currentDistrictId; }, [currentDistrictId]);
 
   // THE ACTUAL FIX for cross-account data leakage: local save data is
   // only ever trusted if it was recorded as belonging to THIS signed-in
@@ -117,6 +121,20 @@ function AppInner({ currentUid }: { currentUid: string }) {
   // treated exactly like "no local save," triggering the same safe
   // fresh-player-or-cloud-restore path used for a genuinely new device.
   const localSaveBelongsToThisUser = localStorage.getItem('basti_owner_uid') === currentUid;
+
+  // A deliberate, one-time economy reset — every business's costs and
+  // income were fundamentally re-architected (fixed 6-level tables with
+  // cross-business synergies, replacing the old uncapped, continuous
+  // growth formula) and rescaled by 1.9x. A save from before this
+  // version bump has levels and prices that don't correspond to
+  // anything in the new system at all, so it's treated exactly like "no
+  // local save exists" — the same safe fresh-start path already used
+  // for a genuinely new device. Bumping CURRENT_SAVE_VERSION forces a
+  // full reset for every existing local save automatically, without
+  // needing to reach every individual device by hand — the version
+  // simply won't match, so old data is ignored rather than restored.
+  const localSaveVersionCurrent = localStorage.getItem('basti_save_version') === String(CURRENT_SAVE_VERSION);
+  const shouldTrustLocalSave = localSaveBelongsToThisUser && localSaveVersionCurrent;
 
   // STATE DEFINITIONS
   const [businessesByDistrict, setBusinessesByDistrict] = useState<Record<string, Business[]>>(() => {
@@ -139,7 +157,7 @@ function AppInner({ currentUid }: { currentUid: string }) {
         return { ...saved, name: fresh.name, emoji: fresh.emoji, gradient: fresh.gradient, description: fresh.description, themeColor: fresh.themeColor };
       });
 
-    const saved = localSaveBelongsToThisUser ? localStorage.getItem('basti_businesses_by_district') : null;
+    const saved = shouldTrustLocalSave ? localStorage.getItem('basti_businesses_by_district') : null;
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -156,7 +174,7 @@ function AppInner({ currentUid }: { currentUid: string }) {
     }
     // Migrate a pre-District-Engine save (single Badeban array) if present
     // — only for this same account, same reasoning as above.
-    const legacy = localSaveBelongsToThisUser ? localStorage.getItem('basti_businesses') : null;
+    const legacy = shouldTrustLocalSave ? localStorage.getItem('basti_businesses') : null;
     if (legacy) {
       try {
         const parsedLegacy = JSON.parse(legacy);
@@ -185,11 +203,11 @@ function AppInner({ currentUid }: { currentUid: string }) {
   // fresh device/browser with no local save at all. This is what gates
   // cloud restore below: if this is false, restore never runs, so
   // there's zero risk of a cloud save overwriting real local progress.
-  const hadNoLocalSaveAtBootRef = useRef(!localSaveBelongsToThisUser);
+  const hadNoLocalSaveAtBootRef = useRef(!shouldTrustLocalSave);
 
   const [stats, setStats] = useState<PlayerStats>(() => {
     const freshDefaults: PlayerStats = {
-      cash: 50000, // "Moment Zero" — enough for exactly one real purchase, not a pre-filled empire
+      cash: 25000, // "Moment Zero" — enough for a couple of small early purchases, not a pre-filled empire. Scaled down alongside the rest of the economy's 1.9x reduction — ₹50,000 against the new, cheaper costs was quietly buying 3 businesses immediately instead of the originally-intended "about one."
       profitPerMin: 0, // Nothing owned yet — Tea Stall is no longer pre-owned, per Moment Zero
       // rank removed — replaced by a real, separately-fetched leaderboard rank
       level: 1,
@@ -212,9 +230,19 @@ function AppInner({ currentUid }: { currentUid: string }) {
       weeklyPointsWeekStart: 0,
       dailyUpgradePointsCount: 0,
       dailyUpgradePointsDate: '',
+      dailyDoubleClaimCount: 0,
+      dailyDoubleClaimDate: '',
+      totalPlayTimeSeconds: 0,
+      adsWatchedCount: 0,
+      businessesBoughtCount: 0,
+      poolClaimsCount: 0,
+      hasClaimedSincePoolCooldown: false,
+      pointsSeasonId: progressionConfig.pointsSeasonId,
+      dailyReferralClaimsCount: 0,
+      dailyReferralClaimsDate: '',
     };
 
-    const saved = localSaveBelongsToThisUser ? localStorage.getItem('basti_stats') : null;
+    const saved = shouldTrustLocalSave ? localStorage.getItem('basti_stats') : null;
     if (saved) {
       // Wrapped in try/catch, matching the same safe-fallback pattern
       // already used for the other three localStorage reads (unlocked
@@ -235,12 +263,15 @@ function AppInner({ currentUid }: { currentUid: string }) {
         const elapsedMinutes = Math.max(0, (Date.now() - lastClaimAt) / 60000);
         const cappedMinutes = Math.min(elapsedMinutes, progressionConfig.poolCapMinutes);
 
-        // Reward cards: if 24 hours have passed since the last reset,
-        // generate a fresh set — any scratched-but-unclaimed value from the
-        // old set simply expires, same one-rule-everywhere principle as the
-        // pool cap above.
+        // Reward cards: reset once the LOCAL calendar day has changed
+        // since the last reset — not a rolling 24-hour window from
+        // whenever the player happened to last open the app, which
+        // drifted further from real midnight every time they were a
+        // few hours late one day. Any scratched-but-unclaimed value
+        // from the old set simply expires, same one-rule-everywhere
+        // principle as the pool cap above.
         const lastCardsReset = parsed.lastCardsResetAt ?? Date.now();
-        const cardsExpired = Date.now() - lastCardsReset >= CARD_RESET_COOLDOWN_MS;
+        const cardsExpired = localDateStringOf(lastCardsReset) !== todayDateString();
         const rewardCards = cardsExpired || !parsed.rewardCards
           ? generateFreshRewardCards()
           : parsed.rewardCards;
@@ -253,7 +284,7 @@ function AppInner({ currentUid }: { currentUid: string }) {
 
         return {
           ...parsed,
-          poolCash: Math.min(progressionConfig.poolCeiling, Math.round((parsed.profitPerMin ?? 0) * cappedMinutes)),
+          poolCash: Math.min(getDistrictTotalCost(currentDistrictId) * progressionConfig.poolCeilingRatio, Math.round((parsed.profitPerMin ?? 0) * cappedMinutes)),
           lastPoolClaimAt: lastClaimAt,
           rewardCards,
           lastCardsResetAt: cardsExpired || !parsed.rewardCards ? Date.now() : lastCardsReset,
@@ -275,6 +306,16 @@ function AppInner({ currentUid }: { currentUid: string }) {
           weeklyPointsWeekStart: parsed.weeklyPointsWeekStart ?? 0,
           dailyUpgradePointsCount: parsed.dailyUpgradePointsCount ?? 0,
           dailyUpgradePointsDate: parsed.dailyUpgradePointsDate ?? '',
+          dailyDoubleClaimCount: parsed.dailyDoubleClaimCount ?? 0,
+          dailyDoubleClaimDate: parsed.dailyDoubleClaimDate ?? '',
+          totalPlayTimeSeconds: parsed.totalPlayTimeSeconds ?? 0,
+          adsWatchedCount: parsed.adsWatchedCount ?? 0,
+          businessesBoughtCount: parsed.businessesBoughtCount ?? 0,
+          poolClaimsCount: parsed.poolClaimsCount ?? 0,
+          hasClaimedSincePoolCooldown: parsed.hasClaimedSincePoolCooldown ?? false,
+          pointsSeasonId: parsed.pointsSeasonId ?? (progressionConfig.pointsSeasonId - 1),
+          dailyReferralClaimsCount: parsed.dailyReferralClaimsCount ?? 0,
+          dailyReferralClaimsDate: parsed.dailyReferralClaimsDate ?? '',
         };
       } catch {
         return freshDefaults;
@@ -311,11 +352,11 @@ function AppInner({ currentUid }: { currentUid: string }) {
   }, [stats.cash]);
 
   const [avatarEmoji, setAvatarEmoji] = useState(() => {
-    return (localSaveBelongsToThisUser && localStorage.getItem('basti_avatar')) || '😎';
+    return (shouldTrustLocalSave && localStorage.getItem('basti_avatar')) || '😎';
   });
 
   const [playerName, setPlayerName] = useState(() => {
-    return (localSaveBelongsToThisUser && localStorage.getItem('basti_player_name')) || 'SmartTycoon';
+    return (shouldTrustLocalSave && localStorage.getItem('basti_player_name')) || 'SmartTycoon';
   });
 
   const [activeTab, setActiveTab] = useState<'home' | 'city' | 'leaderboard' | 'profile'>('home');
@@ -366,7 +407,7 @@ function AppInner({ currentUid }: { currentUid: string }) {
 
   // Header pool claim — floating overlay so it works identically on any
   // tab, since the Header (and its Pool pill) is persistent everywhere.
-  const [poolClaimUI, setPoolClaimUI] = useState<{ amount: number; state: 'collected' | 'doubled' | 'empty' | 'cooldown'; secondsRemaining?: number } | null>(null);
+  const [poolClaimUI, setPoolClaimUI] = useState<{ amount: number; state: 'collected' | 'doubled' | 'empty' | 'cooldown' | 'doubleCapped'; secondsRemaining?: number; totalSeconds?: number } | null>(null);
 
   // Global "money gained" flourish — fires the coin-flight effect from
   // anywhere a handler gains the player real cash, not just the pool
@@ -394,10 +435,25 @@ function AppInner({ currentUid }: { currentUid: string }) {
   }, [milestone, poolClaimUI]);
 
   const handleHeaderClaimPool = () => {
-    const cooldownSeconds = getCooldownRemainingSeconds(stats.lastProfitDoubleClaimAt);
-    if (cooldownSeconds > 0) {
+    const doubleCooldownSeconds = getCooldownRemainingSeconds(stats.lastProfitDoubleClaimAt);
+    if (doubleCooldownSeconds > 0) {
       playClick();
-      setPoolClaimUI({ amount: 0, state: 'cooldown', secondsRemaining: cooldownSeconds });
+      setPoolClaimUI({ amount: 0, state: 'cooldown', secondsRemaining: doubleCooldownSeconds, totalSeconds: CLAIM_COOLDOWN_MS / 1000 });
+      setTimeout(() => setPoolClaimUI((cur) => (cur?.state === 'cooldown' ? null : cur)), 1800);
+      return;
+    }
+    // The genuine 2-hour cooldown between any two pool claims — checked
+    // here explicitly (not just inside handleClaimPool) so the UI can
+    // show the actual real countdown, rather than the generic "empty"
+    // message that would otherwise look identical to genuinely having
+    // nothing to claim yet. Skipped entirely for the very first claim
+    // since this cooldown was introduced (see hasClaimedSincePoolCooldown).
+    const poolCooldownSeconds = stats.hasClaimedSincePoolCooldown
+      ? getCooldownRemainingSeconds(stats.lastPoolClaimAt, progressionConfig.poolClaimCooldownMinutes * 60000)
+      : 0;
+    if (poolCooldownSeconds > 0 && stats.poolCash > 0) {
+      playClick();
+      setPoolClaimUI({ amount: 0, state: 'cooldown', secondsRemaining: poolCooldownSeconds, totalSeconds: progressionConfig.poolClaimCooldownMinutes * 60 });
       setTimeout(() => setPoolClaimUI((cur) => (cur?.state === 'cooldown' ? null : cur)), 1800);
       return;
     }
@@ -431,10 +487,10 @@ function AppInner({ currentUid }: { currentUid: string }) {
             setPoolClaimAdOpen(false);
             setPoolClaimUI((cur) => {
               if (!cur) return null;
-              handleDoubleClaim(cur.amount);
-              logAnalyticsEvent('ad_watched', { source: 'header_double_claim' });
+              const wasDoubled = handleDoubleClaim(cur.amount);
+              if (wasDoubled) logAnalyticsEvent('ad_watched', { source: 'header_double_claim' });
               playUnlock();
-              return { amount: cur.amount, state: 'doubled' };
+              return { amount: cur.amount, state: wasDoubled ? 'doubled' : 'doubleCapped' };
             });
             setTimeout(() => setPoolClaimUI(null), 2200);
             return 6;
@@ -473,21 +529,25 @@ function AppInner({ currentUid }: { currentUid: string }) {
   // Auto-save local storage when state changes
   useEffect(() => {
     localStorage.setItem('basti_owner_uid', currentUid);
+    localStorage.setItem('basti_save_version', String(CURRENT_SAVE_VERSION));
     localStorage.setItem('basti_businesses_by_district', JSON.stringify(businessesByDistrict));
   }, [businessesByDistrict, currentUid]);
 
   useEffect(() => {
     localStorage.setItem('basti_owner_uid', currentUid);
+    localStorage.setItem('basti_save_version', String(CURRENT_SAVE_VERSION));
     localStorage.setItem('basti_stats', JSON.stringify(stats));
   }, [stats, currentUid]);
 
   useEffect(() => {
     localStorage.setItem('basti_owner_uid', currentUid);
+    localStorage.setItem('basti_save_version', String(CURRENT_SAVE_VERSION));
     localStorage.setItem('basti_avatar', avatarEmoji);
   }, [avatarEmoji, currentUid]);
 
   useEffect(() => {
     localStorage.setItem('basti_owner_uid', currentUid);
+    localStorage.setItem('basti_save_version', String(CURRENT_SAVE_VERSION));
     localStorage.setItem('basti_player_name', playerName);
   }, [playerName, currentUid]);
 
@@ -513,7 +573,7 @@ function AppInner({ currentUid }: { currentUid: string }) {
   // both already have progress is a genuinely separate, higher-stakes
   // feature needing a real answer to "which save wins," which deserves
   // its own careful, tested pass rather than being bundled in here.
-  const { cloudUidRef, realLeaderboard, myRealRank, isBrandNewPlayer, weeklyContestBoard, myWeeklyRank, lastLeaderboardFetchAt } = useCloudSync({
+  const { cloudUidRef, realLeaderboard, myRealRank, isBrandNewPlayer, weeklyContestBoard, myWeeklyRank, lastLeaderboardFetchAt, referralCreditsJustEarned, clearReferralCreditsJustEarned, signupReferralBonusEarned, clearSignupReferralBonusEarned } = useCloudSync({
     hadNoLocalSaveAtBoot: hadNoLocalSaveAtBootRef.current,
     businessesByDistrict, stats, avatarEmoji, playerName, currentDistrictId,
     unlockedDistrictsMap, rewardedDistrictsMap,
@@ -545,7 +605,7 @@ function AppInner({ currentUid }: { currentUid: string }) {
       icon: '🎉',
       title: 'Welcome to CoralBay!',
       message: 'Your business empire starts now.',
-      bonusText: '+₹50,000 signup bonus',
+      bonusText: '+₹25,000 signup bonus',
       color: 'gold',
     });
     setShowConfetti(true);
@@ -559,22 +619,25 @@ function AppInner({ currentUid }: { currentUid: string }) {
         const profitPerSec = prev.profitPerMin / 60;
 
         // Pool is now the ONLY thing ticking — cash itself is frozen
-        // until the player taps Claim (Header pill or Portfolio). This
-        // is a deliberate design change, not a bug: the pool is the live
-        // "your business is earning right now" signal, and claiming it
-        // is what actually moves cash. Capped at a genuine, fixed
-        // ₹55 Lakh ceiling (progressionConfig.poolCeiling) — miss a claim for a while and
-        // the excess beyond that is lost, by design, encouraging a real
-        // but forgiving check-in rhythm. This replaced an old formula
-        // that capped only at "profit × 4 hours" with no upper bound at
-        // all, which simulation confirmed could mathematically run away
-        // once profit grew large enough.
-        const poolCap = Math.min(progressionConfig.poolCeiling, prev.profitPerMin * progressionConfig.poolCapMinutes);
+        // until the player taps Claim (Header pill or Portfolio). Capped
+        // at a percentage of the CURRENT district's total cost
+        // (progressionConfig.poolCeilingRatio) rather than one flat
+        // rupee amount for the whole game — verified via simulation
+        // that a flat ceiling became trivially easy to hit within
+        // minutes once profitPerMin compounded in later districts,
+        // while a district-scaled ceiling stays meaningful at every
+        // stage. Also still capped by poolCapMinutes (a genuine time
+        // window) as a second, independent safeguard — miss a claim
+        // for a while and the excess beyond both caps is lost, by
+        // design, encouraging a real but forgiving check-in rhythm.
+        const districtCeiling = getDistrictTotalCost(currentDistrictIdRef.current) * progressionConfig.poolCeilingRatio;
+        const poolCap = Math.min(districtCeiling, prev.profitPerMin * progressionConfig.poolCapMinutes);
         const nextPool = Math.min(poolCap, prev.poolCash + profitPerSec);
 
         return {
           ...prev,
           poolCash: nextPool,
+          totalPlayTimeSeconds: prev.totalPlayTimeSeconds + 1,
         };
       });
     }, 1000);
@@ -584,12 +647,23 @@ function AppInner({ currentUid }: { currentUid: string }) {
 
   // Recalculate profit stream when ANY district's business levels change —
   // owning shops in Katra should still earn while you're looking at Badeban.
+  //
+  // Sums each business's own `profitPerMin` directly — that field is
+  // already correctly maintained by handleUpgrade for every district,
+  // whether it's the legacy calculateTieredProfit formula or, for the 10
+  // strategy-layer districts, the synergy-adjusted value recomputed by
+  // recomputeDistrictProfits after every purchase. Previously this
+  // recalculated everything from baseProfitPerMin/level using the legacy
+  // formula directly — a real bug that silently ignored every synergy
+  // bonus entirely, since a business's true income and its
+  // baseProfitPerMin×level figure diverge the moment any synergy is
+  // active. Caught and fixed before this ever reached a real player.
   useEffect(() => {
     const allDistrictLists: Business[][] = Object.values(businessesByDistrict);
     const totalProfit = allDistrictLists.reduce((grandTotal: number, districtBusinesses: Business[]) => {
       const districtTotal = districtBusinesses.reduce((sum: number, b: Business) => {
         if (b.level === 0) return sum;
-        return sum + calculateTieredProfit(b.baseProfitPerMin, b.level);
+        return sum + b.profitPerMin;
       }, 0);
       return grandTotal + districtTotal;
     }, 0);
@@ -642,7 +716,7 @@ function AppInner({ currentUid }: { currentUid: string }) {
       // double-fire of this effect can never pay the bonus twice.
       markDistrictRewarded(district.id);
 
-      const scaledReward = getDistrictCompletionReward(districtBusinesses);
+      const scaledReward = getDistrictCompletionReward(districtBusinesses, district.id);
       setStats((prev) => ({ ...prev, cash: prev.cash + scaledReward }));
       playLevelUp();
       triggerMoneyFlight();
@@ -738,7 +812,7 @@ function AppInner({ currentUid }: { currentUid: string }) {
   // Every way a player receives cash outside a business purchase/upgrade
   // — extracted into its own hook per the Phase 0 architecture cleanup
   // (src/hooks/useClaimHandlers.ts). Behavior preserved exactly.
-  const { handleClaimPool, handleDoubleClaim, handleScratchCard, handleClaimCard, handleClaimDailyGoal } = useClaimHandlers({
+  const { handleClaimPool, handleDoubleClaim, handleScratchCard, handleClaimCard } = useClaimHandlers({
     stats, businessesByDistrict, setStats, triggerCashPulse, triggerMoneyFlight,
   });
 
@@ -760,6 +834,7 @@ function AppInner({ currentUid }: { currentUid: string }) {
   const { handleUpgrade } = useBusinessActions({
     stats, cashRef,
     currentDistrictName: currentDistrictMeta?.name ?? 'Badeban',
+    currentDistrictId,
     setBusinesses, setStats, setMilestone, setShowConfetti,
     setJustUpdatedBusinessId, triggerCashPulse, pushNewsEvent, playLevelUp,
     triggerContestPointsCelebration,
@@ -1010,14 +1085,10 @@ function AppInner({ currentUid }: { currentUid: string }) {
                         onClaim={handleClaimCard}
                         lastCardClaimAt={stats.lastCardClaimAt}
                       />
-                      {stats.dailyGoal && (
-                        <DailyGoalCard
-                          goal={stats.dailyGoal}
-                          businessesByDistrict={businessesByDistrict}
-                          districtName={displayedDistrictMeta?.name}
-                          onClaim={handleClaimDailyGoal}
-                        />
-                      )}
+                      <ShareEarnCard
+                        referrerUid={currentUid}
+                        bonusCoins={progressionConfig.referralBonusCoins}
+                      />
                     </>
                   )}
 
@@ -1093,6 +1164,8 @@ function AppInner({ currentUid }: { currentUid: string }) {
                   playerName={playerName}
                   playerAvatar={avatarEmoji}
                   playerNetWorth={stats.cash + getEmpireTotalInvested(businessesByDistrict)}
+                  playerProfitPerMin={stats.profitPerMin}
+                  playerBusinessesBoughtCount={stats.businessesBoughtCount}
                   playerLevel={stats.level}
                   weeklyContestBoard={weeklyContestBoard}
                   myWeeklyRank={myWeeklyRank}
@@ -1140,6 +1213,8 @@ function AppInner({ currentUid }: { currentUid: string }) {
           onUpgrade={isPreviewMode ? () => {} : handleUpgrade}
           onClose={() => setSelectedShopId(null)}
           readOnly={isPreviewMode}
+          districtId={currentDistrictId}
+          districtBusinesses={displayedBusinesses}
         />
 
         {/* District unlock toast — brief, top-of-screen, auto-dismissing.
@@ -1221,13 +1296,19 @@ function AppInner({ currentUid }: { currentUid: string }) {
                       + {formatCash(poolClaimUI.amount)} ✓
                     </div>
                     <div className="font-bold text-[19px] mt-0.5" style={{ color: 'var(--color-premium-green-500)' }}>Collected!</div>
-                    <button
-                      onClick={handleHeaderDoubleClaim}
-                      className="w-full mt-4 py-2.5 rounded-xl font-bold text-[12px] cursor-pointer"
-                      style={{ backgroundColor: 'var(--color-premium-gold-400)', color: 'var(--color-premium-text-inverse)' }}
-                    >
-                      ✨ Double it?
-                    </button>
+                    {(stats.dailyDoubleClaimDate === todayDateString() ? stats.dailyDoubleClaimCount : 0) >= progressionConfig.doubleClaimCapPerDay ? (
+                      <div className="text-[10.5px] font-semibold mt-4" style={{ color: 'var(--color-premium-text-secondary)' }}>
+                        Max {progressionConfig.doubleClaimCapPerDay} daily doubles already used — resets tomorrow.
+                      </div>
+                    ) : (
+                      <button
+                        onClick={handleHeaderDoubleClaim}
+                        className="w-full mt-4 py-2.5 rounded-xl font-bold text-[12px] cursor-pointer"
+                        style={{ backgroundColor: 'var(--color-premium-gold-400)', color: 'var(--color-premium-text-inverse)' }}
+                      >
+                        🚀 Boost Profit +50%
+                      </button>
+                    )}
                     <button
                       onClick={() => setPoolClaimUI(null)}
                       className="text-[10px] font-semibold mt-2 cursor-pointer"
@@ -1255,14 +1336,31 @@ function AppInner({ currentUid }: { currentUid: string }) {
                   <>
                     <CountdownClock
                       secondsRemaining={poolClaimUI.secondsRemaining ?? 0}
-                      totalSeconds={CLAIM_COOLDOWN_MS / 1000}
+                      totalSeconds={poolClaimUI.totalSeconds ?? (CLAIM_COOLDOWN_MS / 1000)}
                       size={72}
                     />
                     <div className="font-bold text-[15px] mt-3" style={{ color: 'var(--color-premium-text)' }}>
                       Please wait
                     </div>
                     <div className="text-[10.5px] mt-1" style={{ color: 'var(--color-premium-text-secondary)' }}>
-                      A short cooldown after doubling your last claim.
+                      {(poolClaimUI.totalSeconds ?? 0) > 60
+                        ? `The pool refills on its own timer — ${formatCooldownClock(poolClaimUI.secondsRemaining ?? 0)} remaining.`
+                        : 'A short cooldown after doubling your last claim.'}
+                    </div>
+                  </>
+                ) : poolClaimUI.state === 'doubleCapped' ? (
+                  <>
+                    <div
+                      className="w-16 h-16 rounded-full flex items-center justify-center text-3xl mb-3"
+                      style={{ backgroundColor: 'var(--color-premium-elevated)', border: '2px solid var(--color-premium-border-strong)' }}
+                    >
+                      🌙
+                    </div>
+                    <div className="font-bold text-[15px]" style={{ color: 'var(--color-premium-text)' }}>
+                      Today's Double bonus is used up
+                    </div>
+                    <div className="text-[10.5px] mt-1" style={{ color: 'var(--color-premium-text-secondary)' }}>
+                      You've claimed {formatCash(poolClaimUI.amount)} — Double resets tomorrow.
                     </div>
                   </>
                 ) : (
@@ -1274,7 +1372,7 @@ function AppInner({ currentUid }: { currentUid: string }) {
                       ⚡
                     </div>
                     <div className="font-bold text-[17px]" style={{ color: 'var(--color-premium-green-500)' }}>
-                      Doubled! +{formatCash(poolClaimUI.amount)}
+                      Boosted! +{formatCash(Math.round(poolClaimUI.amount * progressionConfig.doubleClaimBonusPercent))}
                     </div>
                   </>
                 )}
@@ -1295,6 +1393,73 @@ function AppInner({ currentUid }: { currentUid: string }) {
         {/* Simulated ad for the Header claim's double-up — same reused
             mechanic as every other ad-gated moment in the app. */}
         <SimulatedAdModal isOpen={poolClaimAdOpen} countdown={poolClaimAdCountdown} />
+
+        {/* Referral celebration — shown the moment the app confirms one
+            or more people signed up using this player's own link since
+            they last played. Deliberately NOT instant for the referrer
+            (Firestore rules mean only their own device can credit their
+            own account, so this fires on THEIR next app open, not the
+            instant their friend signs up). */}
+        <AnimatePresence>
+          {referralCreditsJustEarned > 0 && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-8" style={{ backgroundColor: 'rgba(0,0,0,0.55)' }}>
+              <motion.div
+                initial={{ scale: 0.85, opacity: 0, y: 16 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                transition={{ duration: 0.3, ease: 'easeOut' }}
+                className="relative w-full max-w-[340px] p-6 rounded-3xl text-center flex flex-col items-center glossy-3d"
+              >
+                <CoinBurst count={12} emoji="🎉" />
+                <div className="text-5xl mb-2">🎉</div>
+                <div className="font-bold text-[17px]" style={{ color: 'var(--color-premium-text)' }}>
+                  {referralCreditsJustEarned === 1 ? 'Your friend joined!' : `${referralCreditsJustEarned} friends joined!`}
+                </div>
+                <div className="font-bold text-[22px] mt-1" style={{ color: 'var(--color-premium-green-500)' }}>
+                  +{formatCash(referralCreditsJustEarned * progressionConfig.referralBonusCoins)}
+                </div>
+                <button
+                  onClick={clearReferralCreditsJustEarned}
+                  className="w-full mt-4 py-2.5 rounded-xl font-bold text-[12px] cursor-pointer"
+                  style={{ backgroundColor: 'var(--color-premium-gold-400)', color: 'var(--color-premium-text-inverse)' }}
+                >
+                  Nice!
+                </button>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {signupReferralBonusEarned && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-8" style={{ backgroundColor: 'rgba(0,0,0,0.55)' }}>
+              <motion.div
+                initial={{ scale: 0.85, opacity: 0, y: 16 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                transition={{ duration: 0.3, ease: 'easeOut' }}
+                className="relative w-full max-w-[340px] p-6 rounded-3xl text-center flex flex-col items-center glossy-3d"
+              >
+                <CoinBurst count={12} emoji="🎁" />
+                <div className="text-5xl mb-2">🎁</div>
+                <div className="font-bold text-[17px]" style={{ color: 'var(--color-premium-text)' }}>
+                  Welcome bonus!
+                </div>
+                <div className="font-bold text-[22px] mt-1" style={{ color: 'var(--color-premium-green-500)' }}>
+                  +{formatCash(progressionConfig.referralBonusCoins)}
+                </div>
+                <button
+                  onClick={clearSignupReferralBonusEarned}
+                  className="w-full mt-4 py-2.5 rounded-xl font-bold text-[12px] cursor-pointer"
+                  style={{ backgroundColor: 'var(--color-premium-gold-400)', color: 'var(--color-premium-text-inverse)' }}
+                >
+                  Let's go!
+                </button>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
 
 
         {/* 4. UNIFIED MILESTONE CELEBRATION — level-up, district-completion,

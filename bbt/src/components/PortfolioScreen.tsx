@@ -11,7 +11,8 @@ import { getLegacyStatus } from '../utils/legacy';
 import { CoinIcon } from './CoinIcon';
 import { formatCash } from '../utils/formatCash';
 import { playClick, playUnlock } from '../utils/audio';
-import { getCooldownRemainingSeconds, CLAIM_COOLDOWN_MS } from '../utils/cooldown';
+import { getCooldownRemainingSeconds, CLAIM_COOLDOWN_MS, formatCooldownClock } from '../utils/cooldown';
+import { todayDateString } from '../utils/weeklyContest';
 import { logAnalyticsEvent } from '../firebase/config';
 import { CountdownClock } from './CountdownClock';
 import { SimulatedAdModal } from './SimulatedAdModal';
@@ -26,7 +27,7 @@ interface PortfolioScreenProps {
   /** Returns the claimed amount, so the UI can show "+₹X Collected!" and
    *  offer to double that exact amount. */
   onClaimPool: () => number;
-  onDoubleClaim: (amount: number) => void;
+  onDoubleClaim: (amount: number) => boolean;
   /** Switches the Home tab to the given district and navigates there. */
   onManageDistrict: (districtId: string) => void;
   onEstablishLegacy: () => void;
@@ -53,8 +54,9 @@ export const PortfolioScreen: React.FC<PortfolioScreenProps> = ({
   onEstablishLegacy,
 }) => {
   const [expandedDistrict, setExpandedDistrict] = useState<string | null>(null);
-  const [claimState, setClaimState] = useState<'idle' | 'collected' | 'claimed' | 'cooldown'>('idle');
+  const [claimState, setClaimState] = useState<'idle' | 'collected' | 'claimed' | 'cooldown' | 'doubleCapped'>('idle');
   const [cooldownSecondsRemaining, setCooldownSecondsRemaining] = useState(0);
+  const [cooldownTotalSeconds, setCooldownTotalSeconds] = useState(CLAIM_COOLDOWN_MS / 1000);
   const [lastClaimedAmount, setLastClaimedAmount] = useState(0);
 
   const xpPct = Math.min(100, Math.round((stats.xp / Math.max(1, stats.nextLevelXp)) * 100));
@@ -79,10 +81,27 @@ export const PortfolioScreen: React.FC<PortfolioScreenProps> = ({
   const poolPct = poolCap > 0 ? Math.min(100, Math.round((stats.poolCash / poolCap) * 100)) : 0;
 
   const handleClaim = () => {
-    const cooldownSeconds = getCooldownRemainingSeconds(stats.lastProfitDoubleClaimAt);
-    if (cooldownSeconds > 0) {
+    const doubleCooldownSeconds = getCooldownRemainingSeconds(stats.lastProfitDoubleClaimAt);
+    if (doubleCooldownSeconds > 0) {
       playClick();
-      setCooldownSecondsRemaining(cooldownSeconds);
+      setCooldownSecondsRemaining(doubleCooldownSeconds);
+      setCooldownTotalSeconds(CLAIM_COOLDOWN_MS / 1000);
+      setClaimState('cooldown');
+      setTimeout(() => setClaimState((cur) => (cur === 'cooldown' ? 'idle' : cur)), 1800);
+      return;
+    }
+    // The genuine 2-hour cooldown between any two pool claims — checked
+    // here explicitly so the UI can show the actual real countdown,
+    // rather than silently doing nothing when there'd otherwise be
+    // something in the pool to claim. Skipped entirely for the very
+    // first claim since this cooldown was introduced.
+    const poolCooldownSeconds = stats.hasClaimedSincePoolCooldown
+      ? getCooldownRemainingSeconds(stats.lastPoolClaimAt, progressionConfig.poolClaimCooldownMinutes * 60000)
+      : 0;
+    if (poolCooldownSeconds > 0 && stats.poolCash > 0) {
+      playClick();
+      setCooldownSecondsRemaining(poolCooldownSeconds);
+      setCooldownTotalSeconds(progressionConfig.poolClaimCooldownMinutes * 60);
       setClaimState('cooldown');
       setTimeout(() => setClaimState((cur) => (cur === 'cooldown' ? 'idle' : cur)), 1800);
       return;
@@ -111,9 +130,9 @@ export const PortfolioScreen: React.FC<PortfolioScreenProps> = ({
             clearInterval(interval);
             setAdOpen(false);
             playUnlock();
-            onDoubleClaim(lastClaimedAmount);
-            logAnalyticsEvent('ad_watched', { source: 'portfolio_double_claim' });
-            setClaimState('claimed');
+            const wasDoubled = onDoubleClaim(lastClaimedAmount);
+            if (wasDoubled) logAnalyticsEvent('ad_watched', { source: 'portfolio_double_claim' });
+            setClaimState(wasDoubled ? 'claimed' : 'doubleCapped');
             setTimeout(() => setClaimState('idle'), 2000);
             return 6;
           }
@@ -245,14 +264,20 @@ export const PortfolioScreen: React.FC<PortfolioScreenProps> = ({
                 </div>
                 <div className="font-bold text-[17px] mt-0.5" style={{ color: GREEN }}>Collected!</div>
 
-                <button
-                  onClick={handleDouble}
-                  className="w-full mt-3 py-2.5 rounded-xl font-bold text-[12px] flex items-center justify-center gap-1.5 cursor-pointer"
-                  style={{ backgroundColor: GOLD, color: 'var(--color-premium-text-inverse)' }}
-                >
-                  <Sparkles size={13} />
-                  Double it? +{formatCash(lastClaimedAmount)} more
-                </button>
+                {(stats.dailyDoubleClaimDate === todayDateString() ? stats.dailyDoubleClaimCount : 0) >= progressionConfig.doubleClaimCapPerDay ? (
+                  <div className="text-[10.5px] font-semibold mt-3" style={{ color: TEXT_SECONDARY }}>
+                    Max {progressionConfig.doubleClaimCapPerDay} daily doubles already used — resets tomorrow.
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleDouble}
+                    className="w-full mt-3 py-2.5 rounded-xl font-bold text-[12px] flex items-center justify-center gap-1.5 cursor-pointer"
+                    style={{ backgroundColor: GOLD, color: 'var(--color-premium-text-inverse)' }}
+                  >
+                    <Sparkles size={13} />
+                    Boost Profit +{formatCash(Math.round(lastClaimedAmount * progressionConfig.doubleClaimBonusPercent))} (+50%)
+                  </button>
+                )}
                 <button onClick={dismissOffer} className="text-[9.5px] font-semibold mt-2 cursor-pointer" style={{ color: TEXT_SECONDARY }}>
                   No thanks
                 </button>
@@ -263,19 +288,32 @@ export const PortfolioScreen: React.FC<PortfolioScreenProps> = ({
               <motion.div key="claimed" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="text-center py-2.5">
                 <div className="font-bold text-[15px] flex items-center justify-center gap-1.5" style={{ color: GREEN }}>
                   <Zap size={15} fill={GREEN} />
-                  Doubled! +{formatCash(lastClaimedAmount)}
+                  Boosted! +{formatCash(Math.round(lastClaimedAmount * progressionConfig.doubleClaimBonusPercent))}
                 </div>
               </motion.div>
             )}
 
             {claimState === 'cooldown' && (
               <motion.div key="cooldown" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="text-center py-2 flex flex-col items-center">
-                <CountdownClock secondsRemaining={cooldownSecondsRemaining} totalSeconds={CLAIM_COOLDOWN_MS / 1000} size={60} />
+                <CountdownClock secondsRemaining={cooldownSecondsRemaining} totalSeconds={cooldownTotalSeconds} size={60} />
                 <div className="font-bold text-[13px] mt-2" style={{ color: 'var(--color-premium-text)' }}>
                   Please wait
                 </div>
                 <div className="text-[9.5px] mt-1" style={{ color: TEXT_SECONDARY }}>
-                  A short cooldown after doubling your last claim.
+                  {cooldownTotalSeconds > 60
+                    ? `The pool refills on its own timer — ${formatCooldownClock(cooldownSecondsRemaining)} remaining.`
+                    : 'A short cooldown after doubling your last claim.'}
+                </div>
+              </motion.div>
+            )}
+
+            {claimState === 'doubleCapped' && (
+              <motion.div key="doubleCapped" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="text-center py-2.5">
+                <div className="font-bold text-[13px]" style={{ color: 'var(--color-premium-text)' }}>
+                  Today's Double bonus is used up
+                </div>
+                <div className="text-[9.5px] mt-1" style={{ color: TEXT_SECONDARY }}>
+                  You've claimed {formatCash(lastClaimedAmount)} — Double resets tomorrow.
                 </div>
               </motion.div>
             )}

@@ -3,6 +3,7 @@ import { signOutUser } from '../firebase/config';
 import { getLegacyStatus } from '../utils/legacy';
 import { generateDailyGoal } from '../utils/dailyGoal';
 import { getEmpireTotalInvested } from '../utils/districtProgress';
+import { progressionConfig } from '../config/progressionConfig';
 
 interface MilestoneState {
   icon: string;
@@ -52,11 +53,11 @@ export function useAccountActions({
   // Reset progress option
   const handleResetProgress = () => {
     playClick();
-    if (confirm("Are you sure you want to rebuild your empire from scratch? This resets your cash to ₹50,000.")) {
+    if (confirm("Are you sure you want to rebuild your empire from scratch? This resets your cash to ₹25,000.")) {
       setBusinessesByDistrict(seedAllDistricts());
-      cashRef.current = 50000;
+      cashRef.current = 25000;
       setStats({
-        cash: 50000,
+        cash: 25000,
         profitPerMin: 0,
         // rank removed — replaced by a real, separately-fetched leaderboard rank
         level: 1,
@@ -79,6 +80,16 @@ export function useAccountActions({
         weeklyPointsWeekStart: 0,
         dailyUpgradePointsCount: 0,
         dailyUpgradePointsDate: '',
+        dailyDoubleClaimCount: 0,
+        dailyDoubleClaimDate: '',
+        totalPlayTimeSeconds: 0,
+        adsWatchedCount: 0,
+        businessesBoughtCount: 0,
+        poolClaimsCount: 0,
+        hasClaimedSincePoolCooldown: false,
+        pointsSeasonId: progressionConfig.pointsSeasonId,
+        dailyReferralClaimsCount: 0,
+        dailyReferralClaimsDate: '',
       });
       resetDistricts();
       setPreviewDistrictId(null);
@@ -104,10 +115,10 @@ export function useAccountActions({
 
     playLevelUp();
     setBusinessesByDistrict(seedAllDistricts());
-    cashRef.current = 50000;
+    cashRef.current = 25000;
     setStats((prev) => ({
       ...prev,
-      cash: 50000,
+      cash: 25000,
       profitPerMin: 0,
       poolCash: 0,
       lastPoolClaimAt: Date.now(),

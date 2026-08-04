@@ -1,6 +1,6 @@
 import { Business, PlayerStats } from '../types';
 import { db } from '../firebase/config';
-import { doc, getDoc, setDoc, collection, query, orderBy, limit, getDocs, getCountFromServer, where } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, collection, query, orderBy, limit, getDocs, getCountFromServer, where } from 'firebase/firestore';
 
 /**
  * The complete shape of a player's save data — every piece of state that
@@ -31,6 +31,12 @@ export interface GameSave {
    *  for a future two-way sync that needs to compare "which save is
    *  newer." */
   savedAt: number;
+  /** Which economy/schema version this save was written under. A save
+   *  from before a version bump (or missing this field entirely, since
+   *  it didn't exist before this was added) is treated as fundamentally
+   *  incompatible rather than partially restored — see
+   *  CURRENT_SAVE_VERSION in App.tsx for the full reasoning. */
+  saveVersion?: number;
 }
 
 const STORAGE_KEY = 'basti_game_save_v1';
@@ -48,12 +54,33 @@ export interface LeaderboardEntry {
   playerName: string;
   avatarEmoji: string;
   netWorth: number;
+  /** The new primary ranking metric for the "Overall" tab — how
+   *  efficiently a player is actually playing, not just how much they've
+   *  spent or how long they've played. Replaces netWorth as the sort key
+   *  specifically because net worth doesn't distinguish a player who's
+   *  mastered synergies from one who's rushed through spending the same
+   *  money badly; income/min does. netWorth itself is kept here
+   *  unchanged, still synced, just no longer the leaderboard's sort key —
+   *  Portfolio's own net worth display is entirely separate from this
+   *  collection and is untouched by this change. */
+  profitPerMin: number;
   level: number;
   updatedAt: number;
   /** This week's contest points — action-based, resets to 0 client-side
    *  the first time a player opens the app in a new week. See
    *  useWeeklyContest for the actual scoring logic. */
   weeklyPoints: number;
+  /** The remaining fields below are the per-player analytics set
+   *  requested directly — viewable as a clean table in the Firestore
+   *  console (or the Cloud Console's table view), rather than relying
+   *  on Firebase Analytics, which is built for aggregate trends across
+   *  all players, not a per-player breakdown. `updatedAt` above already
+   *  serves as "Last Seen", since it's rewritten every sync cycle. */
+  currentDistrictId: string;
+  totalPlayTimeSeconds: number;
+  adsWatchedCount: number;
+  businessesBoughtCount: number;
+  poolClaimsCount: number;
 }
 
 /**
@@ -206,12 +233,12 @@ export const SaveService = {
     }
   },
 
-  /** Fetches the real top N players, ordered by net worth — genuine
-   *  competition against real accounts, replacing the previous
-   *  hardcoded fictional rival list entirely. */
+  /** Fetches the real top N players, ordered by income/min — a genuine
+   *  measure of how well someone is actually playing, replacing the
+   *  earlier net-worth-based ranking. */
   async fetchTopLeaderboard(limitCount: number = 50): Promise<Array<LeaderboardEntry & { uid: string }>> {
     try {
-      const q = query(collection(db, 'leaderboard'), orderBy('netWorth', 'desc'), limit(limitCount));
+      const q = query(collection(db, 'leaderboard'), orderBy('profitPerMin', 'desc'), limit(limitCount));
       const snap = await getDocs(q);
       return snap.docs.map((d) => ({ uid: d.id, ...(d.data() as LeaderboardEntry) }));
     } catch {
@@ -219,17 +246,16 @@ export const SaveService = {
     }
   },
 
-  /** A player's real rank — computed as "how many players have a
-   *  strictly higher net worth than me, plus one." Uses Firestore's
-   *  count aggregation rather than downloading every single player's
-   *  document just to count them, which wouldn't scale past a small
-   *  number of players. Returns null if the count can't be determined
-   *  (e.g. the security rules aren't set up to allow it yet) — callers
-   *  should treat that as "rank unknown," not crash or show a wrong
-   *  number. */
-  async fetchMyRank(myNetWorth: number): Promise<number | null> {
+  /** A player's real rank — computed as "how many players have strictly
+   *  higher income/min than me, plus one." Uses Firestore's count
+   *  aggregation rather than downloading every single player's document
+   *  just to count them, which wouldn't scale past a small number of
+   *  players. Returns null if the count can't be determined (e.g. the
+   *  security rules aren't set up to allow it yet) — callers should
+   *  treat that as "rank unknown," not crash or show a wrong number. */
+  async fetchMyRank(myProfitPerMin: number): Promise<number | null> {
     try {
-      const q = query(collection(db, 'leaderboard'), where('netWorth', '>', myNetWorth));
+      const q = query(collection(db, 'leaderboard'), where('profitPerMin', '>', myProfitPerMin));
       const snap = await getCountFromServer(q);
       return snap.data().count + 1;
     } catch {
@@ -257,6 +283,50 @@ export const SaveService = {
       return snap.data().count + 1;
     } catch {
       return null;
+    }
+  },
+
+  /** Creates the referral record the moment a genuinely new account
+   *  signs up via someone's referral link — keyed by the NEW user's own
+   *  uid (both to naturally prevent one person being "referred" twice,
+   *  and because Firestore's own rule requires request.auth.uid to
+   *  match the document being created). The referrer isn't credited
+   *  yet at this point — that happens separately, the next time THEY
+   *  open the app (see fetchUnclaimedReferrals below), since the new
+   *  signup's own device has no permission to write directly into the
+   *  referrer's account. */
+  async createReferralRecord(newUserUid: string, referrerUid: string): Promise<{ ok: boolean; error: string | null }> {
+    try {
+      await setDoc(doc(db, 'referrals', newUserUid), { referrerUid, newUserUid, claimed: false, createdAt: Date.now() });
+      return { ok: true, error: null };
+    } catch (err: any) {
+      return { ok: false, error: `${err.code || 'unknown'}: ${err.message || String(err)}` };
+    }
+  },
+
+  /** Fetches this player's own unclaimed incoming referrals — people
+   *  who signed up using their link, not yet credited. Called once per
+   *  app open; the caller credits each one (up to the daily cap) and
+   *  then calls markReferralClaimed for each. */
+  async fetchUnclaimedReferrals(referrerUid: string): Promise<Array<{ id: string; referrerUid: string; newUserUid: string; claimed: boolean; createdAt: number }>> {
+    try {
+      const q = query(collection(db, 'referrals'), where('referrerUid', '==', referrerUid), where('claimed', '==', false));
+      const snap = await getDocs(q);
+      return snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) }));
+    } catch {
+      return [];
+    }
+  },
+
+  /** Marks a specific referral as claimed, once the referrer has been
+   *  credited for it — prevents it from being credited again on a
+   *  future app open. */
+  async markReferralClaimed(referralId: string): Promise<{ ok: boolean; error: string | null }> {
+    try {
+      await updateDoc(doc(db, 'referrals', referralId), { claimed: true });
+      return { ok: true, error: null };
+    } catch (err: any) {
+      return { ok: false, error: `${err.code || 'unknown'}: ${err.message || String(err)}` };
     }
   },
 };
