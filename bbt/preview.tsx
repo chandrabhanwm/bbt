@@ -1,6 +1,6 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { ShopDetailSheet } from './src/components/ShopDetailSheet';
+import { BusinessGridView } from './src/components/BusinessGridView';
 import { buildBusinessesForDistrict } from './src/data/districtBusinesses';
 import { recomputeDistrictProfits } from './src/utils/strategyEngine';
 import './src/index.css';
@@ -14,20 +14,19 @@ const seeded = buildBusinessesForDistrict('badeban').map((b, i) => {
 });
 const businesses = recomputeDistrictProfits('badeban', seeded);
 
-const params = new URLSearchParams(window.location.search);
-const mode = params.get('mode') ?? 'unowned';
-
 function Preview() {
-  if (mode === 'unowned') {
-    return <ShopDetailSheet business={businesses[6]} index={6} cash={5000000} onUpgrade={() => {}} onClose={() => {}} readOnly={false} districtId="badeban" districtBusinesses={businesses} />;
-  }
-  if (mode === 'maxed') {
-    return <ShopDetailSheet business={businesses[0]} index={0} cash={5000000} onUpgrade={() => {}} onClose={() => {}} readOnly={false} districtId="badeban" districtBusinesses={businesses} />;
-  }
-  if (mode === 'locked') {
-    return <ShopDetailSheet business={businesses[7]} index={7} cash={5000000} onUpgrade={() => {}} onClose={() => {}} readOnly={true} districtId="badeban" districtBusinesses={businesses} />;
-  }
-  return null;
+  return (
+    <div style={{ padding: '16px', minHeight: '100vh' }}>
+      <BusinessGridView
+        businesses={businesses}
+        onSelectShop={() => {}}
+        readOnly={false}
+        justUpdatedBusinessId={null}
+        cash={500000}
+        contestPointsCelebrationId={null}
+      />
+    </div>
+  );
 }
 
 createRoot(document.getElementById('root')!).render(<Preview />);

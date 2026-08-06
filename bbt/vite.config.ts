@@ -28,6 +28,15 @@ export default defineConfig(() => {
             { src: '/icon-512.png', sizes: '512x512', type: 'image/png' },
             { src: '/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
           ],
+          // Resolves Chrome's two "Richer PWA Install UI won't be
+          // available" warnings — one screenshot with form_factor 'wide'
+          // for desktop, one without it (implicitly 'narrow') for mobile.
+          // Both are real renders of the app's own business grid, not
+          // stock/placeholder imagery.
+          screenshots: [
+            { src: '/screenshots/mobile-1.png', sizes: '390x844', type: 'image/png', form_factor: 'narrow' },
+            { src: '/screenshots/desktop-1.png', sizes: '1280x800', type: 'image/png', form_factor: 'wide' },
+          ],
         },
         // Deliberately minimal runtime caching — this game needs Firebase
         // connectivity anyway (auth, cloud save, leaderboard), so there's
