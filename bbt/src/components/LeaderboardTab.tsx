@@ -1,11 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
-import { TrendingUp, Users, Store, TrendingUp as UpgradeIcon, Wallet, Gift } from 'lucide-react';
+import { Users, Store, TrendingUp as UpgradeIcon, Wallet, Gift } from 'lucide-react';
 import { LeaderboardEntry } from '../services/SaveService';
-import { CoinIcon } from './CoinIcon';
 import { formatCash } from '../utils/formatCash';
 import { playClick } from '../utils/audio';
 import { formatCooldownClock } from '../utils/cooldown';
+
+/** A more compact net-worth format specifically for this table's subtitle
+ *  line — formatCash's own full comma-grouped digits ("₹18,20,000") ran
+ *  long enough to wrap onto a second line in this tighter row layout.
+ *  Abbreviates in the same K/L/Cr tiers used elsewhere in the app. */
+function formatCompactNetWorth(amount: number): string {
+  const value = Math.max(0, amount);
+  if (value >= 10000000) return `₹${(value / 10000000).toFixed(1)}Cr`;
+  if (value >= 100000) return `₹${(value / 100000).toFixed(1)}L`;
+  if (value >= 1000) return `₹${Math.round(value / 1000)}K`;
+  return `₹${Math.floor(value)}`;
+}
 
 interface LeaderboardTabProps {
   /** Real players, fetched from Firestore — replaces the old hardcoded
@@ -19,13 +29,14 @@ interface LeaderboardTabProps {
   playerName: string;
   playerAvatar: string;
   playerNetWorth: number;
-  /** The player's own current income/min — the new primary ranking value
-   *  for the Overall tab, replacing net worth. */
+  /** The player's own current income/min — the primary ranking value for
+   *  the Overall tab. */
   playerProfitPerMin: number;
-  /** Secondary stat shown alongside rank — how many buy/upgrade actions
-   *  this player has made, NOT a distinct-businesses-owned count. Shown
-   *  for context, never used to sort or rank. */
-  playerBusinessesBoughtCount: number;
+  /** Distinct businesses actually owned right now (level > 0) — NOT the
+   *  cumulative buy+upgrade action counter. See
+   *  getDistinctBusinessesOwnedCount for why these are genuinely
+   *  different numbers. */
+  playerDistinctBusinessesOwned: number;
   playerLevel: number;
   /** Weekly contest — same real-player-fetch pattern as the overall
    *  leaderboard above, just ordered by weeklyPoints instead of net
@@ -47,14 +58,14 @@ export const LeaderboardTab: React.FC<LeaderboardTabProps> = ({
   playerAvatar,
   playerNetWorth,
   playerProfitPerMin,
-  playerBusinessesBoughtCount,
+  playerDistinctBusinessesOwned,
   playerLevel,
   weeklyContestBoard,
   myWeeklyRank,
   myWeeklyPoints,
   lastLeaderboardFetchAt,
 }) => {
-  const [view, setView] = useState<'overall' | 'weekly'>('weekly');
+  const [view, setView] = useState<'overall' | 'weekly'>('overall');
 
   // A plain re-render tick, once a second — this is what makes the
   // "updating in Xm" countdown clock actually drain live, the same
@@ -71,10 +82,24 @@ export const LeaderboardTab: React.FC<LeaderboardTabProps> = ({
   const secondsUntilNextFetch = Math.ceil(msUntilNextFetch / 1000);
 
   const activeBoard = view === 'overall' ? leaderboard : weeklyContestBoard;
-  const topThree = activeBoard.slice(0, 3);
-  const remaining = activeBoard.slice(3);
   const amInTopList = myUid !== null && activeBoard.some((e) => e.uid === myUid);
   const myActiveRank = view === 'overall' ? myRank : myWeeklyRank;
+
+  // A player's own row should always show their real, current name,
+  // avatar, and live stats — not whatever was last fetched from
+  // Firestore up to a few minutes ago. Without this, renaming yourself
+  // (or a business you just bought) shows up instantly on Home/Portfolio
+  // (which read live state) but could lag on the leaderboard until the
+  // next periodic fetch, which reads as a sync bug even though nothing
+  // is actually broken underneath.
+  const withLiveSelf = (entry: LeaderboardEntry & { uid: string }) =>
+    entry.uid === myUid
+      ? {
+          ...entry, playerName, avatarEmoji: playerAvatar, netWorth: playerNetWorth,
+          profitPerMin: playerProfitPerMin, distinctBusinessesOwned: playerDistinctBusinessesOwned,
+          level: playerLevel, weeklyPoints: myWeeklyPoints,
+        }
+      : entry;
 
   return (
     <div id="leaderboard-tab" className="p-4 space-y-4 pb-28 select-none" style={{ backgroundColor: 'var(--color-premium-bg)' }}>
@@ -98,10 +123,7 @@ export const LeaderboardTab: React.FC<LeaderboardTabProps> = ({
 
       {/* A clear text countdown to the next real refresh — makes the
           15-minute interval read as "on its own schedule," not as
-          stale or broken. Previously paired with a visual
-          CountdownClock ring showing the exact same remaining time —
-          removed, since the two together were genuinely redundant, not
-          complementary. */}
+          stale or broken. */}
       <div
         className="flex items-center gap-2.5 rounded-2xl px-3 py-2.5"
         style={{ backgroundColor: 'var(--color-premium-surface)', border: '1px solid var(--color-premium-border)' }}
@@ -116,85 +138,24 @@ export const LeaderboardTab: React.FC<LeaderboardTabProps> = ({
         </div>
       </div>
 
-      {view === 'overall' ? (
-        <div
-          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold"
-          style={{ backgroundColor: 'var(--color-premium-surface)', border: '1.5px solid var(--color-premium-border-strong)', color: 'var(--color-premium-text)' }}
-        >
-          <TrendingUp size={12} color="var(--color-premium-gold-400)" />
-          <span>Empire Rankings</span>
-        </div>
-      ) : (
-        <HowToEarnRow />
-      )}
+      {view === 'weekly' && <HowToEarnRow />}
 
       {activeBoard.length === 0 ? (
         <EmptyState />
       ) : (
-        <>
-          {/* A player's own row should always show their real, current
-              name and avatar — not whatever was last fetched from
-              Firestore up to 3 minutes ago. Without this, renaming
-              yourself shows up instantly on Home/Portfolio (which read
-              live state) but could lag on the leaderboard until the
-              next periodic fetch, which reads as a sync bug even though
-              nothing is actually broken underneath. */}
-          {(() => {
-            const withLiveSelf = (entry: LeaderboardEntry & { uid: string }) =>
-              entry.uid === myUid
-                ? { ...entry, playerName, avatarEmoji: playerAvatar, netWorth: playerNetWorth, level: playerLevel, weeklyPoints: myWeeklyPoints }
-                : entry;
-
-            return (
-              <>
-                {/* Top 3 spotlight */}
-                <div className="grid grid-cols-3 gap-2.5">
-                  {topThree.map((entry, i) => (
-                    <motion.div
-                      key={entry.uid}
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.25, ease: 'easeOut', delay: i * 0.05 }}
-                    >
-                      <SpotlightCard entry={withLiveSelf(entry)} rank={i + 1} isMe={entry.uid === myUid} valueType={view === 'overall' ? 'cash' : 'points'} />
-                    </motion.div>
-                  ))}
-                </div>
-
-                {/* Remaining rankings — clean list, thin separators */}
-                {remaining.length > 0 && (
-                  <div
-                    className="rounded-2xl overflow-hidden"
-                    style={{ backgroundColor: 'var(--color-premium-surface)', border: '1.5px solid var(--color-premium-border)' }}
-                  >
-                    {remaining.map((entry, i) => (
-                      <RankRow key={entry.uid} entry={withLiveSelf(entry)} rank={i + 4} isLast={i === remaining.length - 1} isMe={entry.uid === myUid} valueType={view === 'overall' ? 'cash' : 'points'} />
-                    ))}
-                  </div>
-                )}
-              </>
-            );
-          })()}
-
-          {/* If the player isn't in the fetched top list, show their own
-              real rank separately — real players can be ranked far below
-              the top list shown above, and they still deserve to see
-              where they stand. */}
-          {!amInTopList && myActiveRank !== null && (
-            <div
-              className="rounded-2xl overflow-hidden"
-              style={{ backgroundColor: 'var(--color-premium-surface)', border: '1.5px solid var(--color-premium-gold-400)' }}
-            >
-              <RankRow
-                entry={{ uid: myUid ?? 'me', playerName, avatarEmoji: playerAvatar, netWorth: playerNetWorth, profitPerMin: playerProfitPerMin, level: playerLevel, updatedAt: Date.now(), weeklyPoints: myWeeklyPoints, currentDistrictId: '', totalPlayTimeSeconds: 0, adsWatchedCount: 0, businessesBoughtCount: playerBusinessesBoughtCount, poolClaimsCount: 0 }}
-                rank={myActiveRank}
-                isLast
-                isMe
-                valueType={view === 'overall' ? 'cash' : 'points'}
-              />
-            </div>
-          )}
-        </>
+        <LeaderboardTable
+          entries={activeBoard.map(withLiveSelf)}
+          myUid={myUid}
+          amInTopList={amInTopList}
+          myActiveRank={myActiveRank}
+          valueType={view === 'overall' ? 'cash' : 'points'}
+          myOwnRowFallback={{
+            uid: myUid ?? 'me', playerName, avatarEmoji: playerAvatar, netWorth: playerNetWorth,
+            profitPerMin: playerProfitPerMin, level: playerLevel, updatedAt: Date.now(), weeklyPoints: myWeeklyPoints,
+            currentDistrictId: '', totalPlayTimeSeconds: 0, adsWatchedCount: 0, businessesBoughtCount: 0,
+            poolClaimsCount: 0, distinctBusinessesOwned: playerDistinctBusinessesOwned,
+          }}
+        />
       )}
     </div>
   );
@@ -228,104 +189,105 @@ const HowToEarnRow: React.FC = () => {
   );
 };
 
-const SpotlightCard: React.FC<{ entry: LeaderboardEntry & { uid: string }; rank: number; isMe: boolean; valueType: 'cash' | 'points' }> = ({ entry, rank, isMe, valueType }) => (
-  <div
-    className="rounded-2xl p-2.5 flex flex-col items-center text-center"
-    style={{
-      backgroundColor: 'var(--color-premium-surface)',
-      border: `1.5px solid ${isMe ? 'var(--color-premium-gold-400)' : 'var(--color-premium-border)'}`,
-    }}
-  >
-    <div className="relative w-10 h-10 mb-1.5">
-      <div
-        className="w-full h-full rounded-full flex items-center justify-center text-lg"
-        style={{ backgroundColor: 'var(--color-premium-elevated)', border: '1.5px solid var(--color-premium-border-strong)' }}
-      >
-        {entry.avatarEmoji}
-      </div>
-      <div
-        className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold"
-        style={{ backgroundColor: 'var(--color-premium-gold-400)', color: 'var(--color-premium-text-inverse)' }}
-      >
-        {rank}
-      </div>
-    </div>
+const MEDALS = ['🥇', '🥈', '🥉'];
 
-    <span className="text-[10.5px] font-bold leading-tight truncate w-full" style={{ color: 'var(--color-premium-text)' }}>
-      {entry.playerName}
-    </span>
-    {isMe && (
-      <span className="text-[8px] font-bold mt-0.5" style={{ color: 'var(--color-premium-gold-400)' }}>YOU</span>
-    )}
+/** A single, unified table — header row plus every ranked player, top to
+ *  bottom — replacing the earlier "top 3 as separate spotlight cards,
+ *  everyone else as a plain list" split. Matches the requested reference
+ *  layout: RK / Player / Businesses / ₹ per min as four aligned columns,
+ *  with the current player's own row visually called out (gold name,
+ *  left accent bar) wherever it actually falls in the ranking. */
+const LeaderboardTable: React.FC<{
+  entries: Array<LeaderboardEntry & { uid: string }>;
+  myUid: string | null;
+  amInTopList: boolean;
+  myActiveRank: number | null;
+  valueType: 'cash' | 'points';
+  myOwnRowFallback: LeaderboardEntry & { uid: string };
+}> = ({ entries, myUid, amInTopList, myActiveRank, valueType, myOwnRowFallback }) => {
+  // If the player isn't in the fetched top list, their own row is
+  // appended at the bottom with their real rank — real players can be
+  // ranked far below the top list shown above, and they still deserve
+  // to see where they stand, not be silently omitted.
+  const rows = !amInTopList && myActiveRank !== null
+    ? [...entries.map((e, i) => ({ entry: e, rank: i + 1 })), { entry: myOwnRowFallback, rank: myActiveRank }]
+    : entries.map((e, i) => ({ entry: e, rank: i + 1 }));
 
-    {valueType === 'cash' ? (
-      <>
-        <div className="flex items-center gap-1 mt-1.5 font-bold text-[11px]" style={{ color: 'var(--color-premium-green-500)' }}>
-          <CoinIcon className="w-3 h-3" premium />
-          {formatCash(entry.profitPerMin)}/min
-        </div>
-        <div className="text-[7.5px] font-medium mt-0.5" style={{ color: 'var(--color-premium-text-secondary)' }}>
-          {entry.businessesBoughtCount} businesses
-        </div>
-      </>
-    ) : (
-      <div className="font-bold text-[11px] mt-1.5" style={{ color: 'var(--color-premium-gold-400)' }}>
-        {entry.weeklyPoints} pts
-      </div>
-    )}
-    <div className="text-[8px] font-medium mt-1" style={{ color: 'var(--color-premium-text-secondary)' }}>
-      Level {entry.level}
-    </div>
-  </div>
-);
-
-const RankRow: React.FC<{ entry: LeaderboardEntry & { uid: string }; rank: number; isLast: boolean; isMe: boolean; valueType: 'cash' | 'points' }> = ({ entry, rank, isLast, isMe, valueType }) => (
-  <div
-    className={`flex items-center gap-3 px-3 py-2.5 ${isMe ? 'bg-[var(--color-premium-gold-400)]/[0.06]' : ''}`}
-    style={{
-      borderBottom: isLast ? 'none' : '1px solid var(--color-premium-border)',
-      borderLeft: isMe ? '2.5px solid var(--color-premium-gold-400)' : '2.5px solid transparent',
-    }}
-  >
-    <span className="w-8 text-center text-[11px] font-bold flex-shrink-0" style={{ color: 'var(--color-premium-text-secondary)' }}>
-      #{rank}
-    </span>
-
+  return (
     <div
-      className="w-8 h-8 rounded-full flex items-center justify-center text-base flex-shrink-0"
-      style={{ backgroundColor: 'var(--color-premium-elevated)', border: '1.5px solid var(--color-premium-border)' }}
+      className="rounded-2xl overflow-hidden"
+      style={{ backgroundColor: 'var(--color-premium-surface)', border: '1.5px solid var(--color-premium-border)' }}
     >
-      {entry.avatarEmoji}
-    </div>
+      {/* Column header */}
+      <div
+        className="flex items-center gap-3 px-3 py-2.5"
+        style={{ backgroundColor: 'var(--color-premium-elevated)', borderBottom: '1px solid var(--color-premium-border)' }}
+      >
+        <span className="w-7 text-center text-[9px] font-bold tracking-wide flex-shrink-0" style={{ color: 'var(--color-premium-text-secondary)' }}>RK</span>
+        <span className="flex-1 text-[9px] font-bold tracking-wide" style={{ color: 'var(--color-premium-text-secondary)' }}>PLAYER</span>
+        {valueType === 'cash' && (
+          <span className="w-16 text-center text-[9px] font-bold tracking-wide flex-shrink-0" style={{ color: 'var(--color-premium-text-secondary)' }}>BUSINESSES</span>
+        )}
+        <span className="w-20 text-right text-[9px] font-bold tracking-wide flex-shrink-0" style={{ color: 'var(--color-premium-text-secondary)' }}>
+          {valueType === 'cash' ? '₹/MIN' : 'POINTS'}
+        </span>
+      </div>
 
-    <div className="flex-1 min-w-0">
-      <span className="text-[11.5px] font-bold truncate block" style={{ color: isMe ? 'var(--color-premium-gold-400)' : 'var(--color-premium-text)' }}>
-        {entry.playerName}{isMe ? ' (You)' : ''}
-      </span>
-      <span className="text-[8.5px] font-medium" style={{ color: 'var(--color-premium-text-secondary)' }}>
-        Level {entry.level}
-      </span>
-    </div>
+      {rows.map(({ entry, rank }, i) => {
+        const isMe = entry.uid === myUid;
+        const isLast = i === rows.length - 1;
+        return (
+          <div
+            key={entry.uid + '-' + rank}
+            className="flex items-center gap-3 px-3 py-3"
+            style={{
+              backgroundColor: isMe ? 'rgba(212,167,44,0.07)' : undefined,
+              borderBottom: isLast ? 'none' : '1px solid var(--color-premium-border)',
+              borderLeft: isMe ? '3px solid var(--color-premium-gold-400)' : '3px solid transparent',
+            }}
+          >
+            {/* Rank — a medal for the actual top 3 positions, plain "#N"
+                text otherwise. Uses the real rank number, not the row's
+                position in this particular list, so this stays correct
+                even for the appended below-the-fold "my rank" row. */}
+            <span className="w-7 text-center text-[15px] flex-shrink-0" style={{ color: 'var(--color-premium-text-secondary)' }}>
+              {rank <= 3 ? MEDALS[rank - 1] : <span className="text-[11px] font-bold">#{rank}</span>}
+            </span>
 
-    <div className="text-right flex-shrink-0">
-      {valueType === 'cash' ? (
-        <>
-          <div className="flex items-center justify-end gap-1 font-bold text-[11px]" style={{ color: 'var(--color-premium-green-500)' }}>
-            <CoinIcon className="w-3 h-3" premium />
-            {formatCash(entry.profitPerMin)}/min
+            <div
+              className="w-8 h-8 rounded-full flex items-center justify-center text-base flex-shrink-0"
+              style={{ backgroundColor: 'var(--color-premium-elevated)', border: '1.5px solid var(--color-premium-border)' }}
+            >
+              {entry.avatarEmoji}
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <span className="text-[12.5px] font-bold truncate block" style={{ color: isMe ? 'var(--color-premium-gold-400)' : 'var(--color-premium-text)' }}>
+                {isMe ? 'You' : entry.playerName}
+              </span>
+              <span className="text-[9px] font-medium whitespace-nowrap" style={{ color: 'var(--color-premium-text-secondary)' }}>
+                {formatCompactNetWorth(entry.netWorth)} net worth
+              </span>
+            </div>
+
+            {valueType === 'cash' && (
+              <span className="w-16 text-center text-[13px] font-bold flex-shrink-0" style={{ color: 'var(--color-premium-text)' }}>
+                {entry.distinctBusinessesOwned}
+              </span>
+            )}
+
+            <span
+              className="w-20 text-right text-[12.5px] font-bold flex-shrink-0"
+              style={{ color: valueType === 'cash' ? 'var(--color-premium-green-500)' : 'var(--color-premium-gold-400)' }}
+            >
+              {valueType === 'cash' ? `₹${entry.profitPerMin.toLocaleString('en-IN')}` : `${entry.weeklyPoints} pts`}
+            </span>
           </div>
-          <div className="text-[8px] font-medium" style={{ color: 'var(--color-premium-text-secondary)' }}>
-            {entry.businessesBoughtCount} businesses
-          </div>
-        </>
-      ) : (
-        <div className="font-bold text-[11px]" style={{ color: 'var(--color-premium-gold-400)' }}>
-          {entry.weeklyPoints} pts
-        </div>
-      )}
+        );
+      })}
     </div>
-  </div>
-);
+  );
+};
 
 const EmptyState: React.FC = () => (
   <div

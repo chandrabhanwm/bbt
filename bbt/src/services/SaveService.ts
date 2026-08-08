@@ -81,6 +81,14 @@ export interface LeaderboardEntry {
   adsWatchedCount: number;
   businessesBoughtCount: number;
   poolClaimsCount: number;
+  /** Distinct businesses actually owned right now (level > 0), across
+   *  every district — the leaderboard's "Businesses" column. Genuinely
+   *  different from businessesBoughtCount above: that field counts every
+   *  buy AND upgrade action cumulatively, so a player who's upgraded one
+   *  business five times would show as having "bought" five businesses
+   *  there. This field is always a fresh count of real ownership, never
+   *  inflated by repeat investment in the same business. */
+  distinctBusinessesOwned: number;
 }
 
 /**

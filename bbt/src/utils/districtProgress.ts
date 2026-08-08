@@ -144,3 +144,18 @@ export function getEmpireTotalInvested(businessesByDistrict: Record<string, Busi
     return grandTotal + districtBusinesses.reduce((sum, b) => sum + getBusinessTotalInvested(b, districtId), 0);
   }, 0);
 }
+
+/** How many DISTINCT businesses a player actually owns right now, across
+ *  every district — each business counted once regardless of its level.
+ *  Deliberately different from PlayerStats.businessesBoughtCount, which
+ *  increments on every buy AND every upgrade action and so overstates
+ *  "how many businesses" a player has by counting repeat investment in
+ *  the same business as if it were a new one. This is a genuine
+ *  ownership count, always derived fresh from real state rather than an
+ *  incrementing counter — a business only ever counts here once, no
+ *  matter how many times it's since been upgraded. */
+export function getDistinctBusinessesOwnedCount(businessesByDistrict: Record<string, Business[]>): number {
+  return Object.values(businessesByDistrict).reduce((total, districtBusinesses) => {
+    return total + districtBusinesses.filter(b => b.level > 0).length;
+  }, 0);
+}

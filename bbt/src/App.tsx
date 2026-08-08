@@ -24,7 +24,7 @@ import { DistrictSummaryCard } from './components/DistrictSummaryCard';
 import { buildBusinessesForDistrict, districtEconomies, getDistrictTotalCost } from './data/districtBusinesses';
 import { bastiCity, getDistrict } from './data/cityMapData';
 import { DistrictProvider, useDistrict } from './context/DistrictContext';
-import { getDistrictProgress, isDistrictCompleted, getDistrictCompletionReward, getEmpireTotalInvested } from './utils/districtProgress';
+import { getDistrictProgress, isDistrictCompleted, getDistrictCompletionReward, getEmpireTotalInvested, getDistinctBusinessesOwnedCount } from './utils/districtProgress';
 import { generateDailyGoal } from './utils/dailyGoal';
 import { getLegacyIncomeMultiplier } from './utils/legacy';
 import { subscribeToAuthChanges, auth, signOutUser, checkRedirectResult, logAnalyticsEvent } from './firebase/config';
@@ -1166,7 +1166,7 @@ function AppInner({ currentUid }: { currentUid: string }) {
                   playerAvatar={avatarEmoji}
                   playerNetWorth={stats.cash + getEmpireTotalInvested(businessesByDistrict)}
                   playerProfitPerMin={stats.profitPerMin}
-                  playerBusinessesBoughtCount={stats.businessesBoughtCount}
+                  playerDistinctBusinessesOwned={getDistinctBusinessesOwnedCount(businessesByDistrict)}
                   playerLevel={stats.level}
                   weeklyContestBoard={weeklyContestBoard}
                   myWeeklyRank={myWeeklyRank}
