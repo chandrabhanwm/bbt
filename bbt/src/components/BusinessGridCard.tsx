@@ -193,7 +193,7 @@ export const BusinessGridCard: React.FC<BusinessGridCardProps> = ({ business, in
             animate={{ opacity: [0, 1, 1, 0], y: [4, -14, -22, -30], scale: [0.6, 1.15, 1, 0.9] }}
             transition={{ duration: 0.9, ease: 'easeOut', times: [0, 0.25, 0.7, 1] }}
           >
-            {business.level === 1 ? '✓ Purchased!' : '⬆ Level Up!'}
+            {business.level === 1 ? '✓ Purchased!' : '⬆ LEVEL UP!'}
           </motion.div>
         </>
       )}
@@ -226,9 +226,11 @@ export const BusinessGridCard: React.FC<BusinessGridCardProps> = ({ business, in
           glow color is the business's own level tier once owned, so the
           level color is still visible here even though there's no
           full-card wash. */}
-      <div
+      <motion.div
         className="glossy-3d relative w-full h-[130px] rounded-2xl overflow-hidden flex-shrink-0"
         style={{ border: `1.5px solid ${imageAccent}`, zIndex: 2 }}
+        animate={{ scale: celebrating ? [1, 1.18, 0.96, 1] : 1 }}
+        transition={{ duration: 0.5, ease: 'easeOut', times: [0, 0.4, 0.7, 1] }}
       >
         <BusinessPhoto
           business={business}
@@ -242,7 +244,7 @@ export const BusinessGridCard: React.FC<BusinessGridCardProps> = ({ business, in
             </div>
           }
         />
-      </div>
+      </motion.div>
 
       {/* Title, category subtitle, description — plain readable text on
           the flat card surface. Every block below reserves a FIXED height
@@ -263,12 +265,6 @@ export const BusinessGridCard: React.FC<BusinessGridCardProps> = ({ business, in
           style={{ color: 'var(--color-premium-text-secondary)', minHeight: '14px' }}
         >
           {toTitleCase(category.label)}
-        </p>
-        <p
-          className="text-[11px] leading-snug mt-2 line-clamp-2"
-          style={{ color: 'var(--color-premium-text-secondary)', minHeight: '30px' }}
-        >
-          {business.description}
         </p>
       </div>
 

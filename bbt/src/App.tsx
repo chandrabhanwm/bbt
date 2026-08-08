@@ -19,6 +19,7 @@ import { CityMapScreen } from './components/citymap/CityMapScreen';
 import { PortfolioScreen } from './components/PortfolioScreen';
 import { SettingsScreen } from './components/SettingsScreen';
 import { Confetti, CoinBurst, CoinFlight } from './components/FX';
+import { MilestoneOverlay } from './components/MilestoneOverlay';
 import { DistrictSummaryCard } from './components/DistrictSummaryCard';
 import { buildBusinessesForDistrict, districtEconomies, getDistrictTotalCost } from './data/districtBusinesses';
 import { bastiCity, getDistrict } from './data/cityMapData';
@@ -380,7 +381,7 @@ function AppInner({ currentUid }: { currentUid: string }) {
   // nearly identical implementations differing only in icon/color/text —
   // this consolidates them into one real shared component.
   const [milestone, setMilestone] = useState<{
-    icon: string; title: string; message: string; bonusText: string; color: 'gold' | 'green';
+    icon: string; title: string; message: string; bonusText: string; color: 'gold' | 'green' | 'purple' | 'teal';
   } | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
 
@@ -1468,43 +1469,7 @@ function AppInner({ currentUid }: { currentUid: string }) {
             in icon/color/text; consolidated so any future Milestone-tier
             trigger reuses this directly instead of copy-pasting a third. */}
         <AnimatePresence>
-          {milestone && !poolClaimUI && (
-            <motion.div
-              initial={{ scale: 0.94, opacity: 0, y: 16 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.96, opacity: 0 }}
-              transition={{ duration: 0.25, ease: 'easeOut' }}
-              className="absolute inset-x-8 top-1/3 z-50 p-5 rounded-3xl text-center flex flex-col items-center overflow-visible"
-              style={{
-                backgroundColor: 'var(--color-premium-surface)',
-                border: `2px solid var(--color-premium-${milestone.color === 'gold' ? 'gold-400' : 'green-500'})`,
-              }}
-            >
-              {showConfetti && <Confetti />}
-
-              <div
-                className="w-14 h-14 rounded-full flex items-center justify-center text-3xl mb-3"
-                style={{
-                  backgroundColor: 'var(--color-premium-elevated)',
-                  border: `2px solid var(--color-premium-${milestone.color === 'gold' ? 'gold-400' : 'green-500'})`,
-                }}
-              >
-                {milestone.icon}
-              </div>
-              <h2
-                className="font-bold text-base uppercase tracking-widest"
-                style={{ color: `var(--color-premium-${milestone.color === 'gold' ? 'gold-400' : 'green-500'})` }}
-              >
-                {milestone.title}
-              </h2>
-              <p className="text-[11px] font-medium leading-relaxed mt-2" style={{ color: 'var(--color-premium-text)' }}>
-                {milestone.message}
-              </p>
-              <div className="mt-3.5 text-[9px] font-bold uppercase tracking-wider" style={{ color: 'var(--color-premium-green-500)' }}>
-                {milestone.bonusText}
-              </div>
-            </motion.div>
-          )}
+          {milestone && !poolClaimUI && <MilestoneOverlay data={milestone} />}
         </AnimatePresence>
 
       </div>

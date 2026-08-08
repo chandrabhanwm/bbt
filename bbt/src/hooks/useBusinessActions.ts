@@ -1,7 +1,7 @@
 import { Business, PlayerStats } from '../types';
 import { calculateTieredProfit } from '../utils/profitCurve';
 import { applyContestPoints } from '../utils/weeklyContest';
-import { districtUsesStrategyLayer, getNextLevelCost, recomputeDistrictProfits } from '../utils/strategyEngine';
+import { districtUsesStrategyLayer, getNextLevelCost, recomputeDistrictProfits, getSynergyRules, computeSynergyAdjustedProfit } from '../utils/strategyEngine';
 
 const LEVEL_UP_CASH_BONUS = 1000;
 
@@ -10,7 +10,7 @@ interface MilestoneState {
   title: string;
   message: string;
   bonusText: string;
-  color: 'gold' | 'green';
+  color: 'gold' | 'green' | 'purple' | 'teal';
 }
 
 interface UseBusinessActionsParams {
@@ -156,6 +156,29 @@ export function useBusinessActions({
         // persisted flag so a returning player never sees this twice.
         // Every purchase/upgrade after this still gets the Notable-tier
         // card animation (below) — this is additional, not instead of.
+        //
+        // Below that: two more major-milestone triggers, both specific
+        // to the strategy-layer economy. Reaching Level 6 is genuinely
+        // rare (the actual cap, not routine progress) and a synergy
+        // "discovered" this specific purchase will never re-trigger,
+        // since businesses are never sold — a newly-active synergy this
+        // purchase IS the first time it's ever been active at all, with
+        // no separate persisted tracking needed. Structured as an
+        // else-if chain so only one milestone fires per action, even if
+        // more than one condition happens to be true at once.
+        const usesStrategyLayerForMilestones = districtUsesStrategyLayer(currentDistrictId);
+        let newlyActiveSynergyName: string | null = null;
+        if (usesStrategyLayerForMilestones) {
+          const ownedBefore = new Set(prev.filter(x => x.level > 0).map(x => x.id));
+          const ownedAfter = new Set(prev.filter(x => x.level > 0 || x.id === id).map(x => x.id));
+          const rules = getSynergyRules(currentDistrictId);
+          const newlyActive = rules.find(r =>
+            r.requiresIds.every(rid => ownedAfter.has(rid)) &&
+            !r.requiresIds.every(rid => ownedBefore.has(rid))
+          );
+          if (newlyActive) newlyActiveSynergyName = newlyActive.name;
+        }
+
         if (isUnlocking && !stats.hasMadeFirstPurchase) {
           playLevelUp();
           setMilestone({
@@ -173,6 +196,26 @@ export function useBusinessActions({
             message: `${b.name} is now Level ${newLvl} — growing your income.`,
             bonusText: 'Upgrades are how every business becomes worth more.',
             color: 'gold',
+          });
+        } else if (usesStrategyLayerForMilestones && newLvl === 6) {
+          playLevelUp();
+          const ownedAfterForDisplay = new Set(prev.filter(x => x.level > 0 || x.id === id).map(x => x.id));
+          const accurateMaxIncome = computeSynergyAdjustedProfit(currentDistrictId, id, newLvl, ownedAfterForDisplay);
+          setMilestone({
+            icon: '👑',
+            title: 'Max Level Reached!',
+            message: `${b.name} is now a flagship business — fully mastered.`,
+            bonusText: `Earning ₹${accurateMaxIncome.toLocaleString('en-IN')}/min at its peak`,
+            color: 'purple',
+          });
+        } else if (newlyActiveSynergyName) {
+          playLevelUp();
+          setMilestone({
+            icon: '✨',
+            title: 'Synergy Discovered!',
+            message: newlyActiveSynergyName,
+            bonusText: 'These businesses now boost each other.',
+            color: 'teal',
           });
         }
 
