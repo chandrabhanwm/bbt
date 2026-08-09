@@ -105,6 +105,16 @@ export function computeSynergyAdjustedProfit(districtId: string, businessId: str
   const previewLevel = level <= 0 ? 1 : level;
   const base = getBaseIncomeAtLevel(districtId, businessId, previewLevel);
   if (base === 0) return 0;
+  // Unowned businesses show their plain, unboosted base income only — no
+  // synergy bonus applied to the preview. Applying it here made a
+  // cheaper business with already-owned neighbors show a HIGHER number
+  // than a genuinely more valuable business whose own synergy
+  // requirements weren't met yet (e.g. Anchor Grill showing ₹2,691 vs
+  // Grand Mahal's ₹2,632, despite Grand Mahal being the pricier,
+  // higher-ceiling business) — a real, misleading comparison for anyone
+  // deciding what to buy next. Once actually owned, a business's income
+  // correctly reflects every active synergy again, same as before.
+  if (level <= 0) return Math.floor(base);
   const activeSynergies = getActiveSynergiesFor(districtId, businessId, ownedIds);
   const totalBonus = activeSynergies.reduce((sum, s) => sum + s.bonusPercent, 0);
   return Math.floor(base * (1 + totalBonus));
