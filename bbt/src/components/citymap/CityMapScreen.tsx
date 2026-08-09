@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { motion } from 'motion/react';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { bastiCity, getDistrict, isRoadActive, District } from '../../data/cityMapData';
 import { DistrictProgressSummary } from '../../utils/districtProgress';
@@ -95,7 +96,19 @@ export const CityMapScreen: React.FC<CityMapScreenProps> = ({ onOpenDistrict, on
   return (
     <div
       className="relative w-full h-full overflow-hidden select-none"
-      style={{ background: 'radial-gradient(120% 90% at 50% 35%, var(--color-premium-elevated) 0%, var(--color-premium-bg) 75%)' }}
+      style={{
+        // Layered terrain zones instead of one flat radial gradient — a
+        // few large, soft, differently-tinted patches (warm near the
+        // starting district, cooler toward the unexplored edges) so the
+        // world reads as having actual varied regions, not a single flat
+        // vignette repeated everywhere.
+        background: `
+          radial-gradient(55% 40% at 25% 85%, rgba(212,167,44,0.10) 0%, transparent 100%),
+          radial-gradient(50% 35% at 75% 15%, rgba(45,190,200,0.08) 0%, transparent 100%),
+          radial-gradient(60% 45% at 70% 70%, rgba(120,80,180,0.06) 0%, transparent 100%),
+          radial-gradient(120% 90% at 50% 35%, var(--color-premium-elevated) 0%, var(--color-premium-bg) 75%)
+        `,
+      }}
     >
       {/* City skyline silhouette — a fixed atmospheric backdrop, doesn't
           pan/zoom with the map content itself. Same thin gold line-art
@@ -127,6 +140,33 @@ export const CityMapScreen: React.FC<CityMapScreenProps> = ({ onOpenDistrict, on
           <rect x="372" y="90" width="20" height="70" />
         </g>
       </svg>
+
+      {/* Slowly drifting clouds — fixed to the viewport (not part of the
+          pannable map content, so they don't zoom/pan with it), giving
+          the world genuine atmosphere rather than empty static space
+          above the terrain gradient. Soft, blurred, low-opacity ellipses
+          rather than any recognizable cloud shape — the point is
+          ambient motion, not an illustrated element that needs to read
+          clearly as "a cloud" up close. */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        {[
+          { top: '8%', size: 180, duration: 42, opacity: 0.05 },
+          { top: '22%', size: 130, duration: 55, opacity: 0.04 },
+          { top: '45%', size: 220, duration: 65, opacity: 0.045 },
+          { top: '68%', size: 150, duration: 48, opacity: 0.04 },
+        ].map((cloud, i) => (
+          <motion.div
+            key={i}
+            style={{
+              position: 'absolute', top: cloud.top, width: cloud.size, height: cloud.size * 0.4,
+              borderRadius: '50%', background: '#ffffff', opacity: cloud.opacity, filter: 'blur(18px)',
+            }}
+            initial={{ x: '-20%' }}
+            animate={{ x: '120vw' }}
+            transition={{ duration: cloud.duration, repeat: Infinity, ease: 'linear', delay: i * -13 }}
+          />
+        ))}
+      </div>
 
       <TransformWrapper
         initialScale={1}

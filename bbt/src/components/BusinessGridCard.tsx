@@ -123,6 +123,7 @@ export const BusinessGridCard: React.FC<BusinessGridCardProps> = ({ business, in
   }, [justUpdated]);
 
   const levelTier = getLevelTierColor(business.level);
+  const isMaxLevel = business.maxLevel !== undefined && business.level >= business.maxLevel;
   // The glossy image frame's accent color — the level's own color once
   // owned, otherwise the app's default teal, so an unbought business
   // doesn't show a color that hasn't been earned yet.
@@ -299,29 +300,58 @@ export const BusinessGridCard: React.FC<BusinessGridCardProps> = ({ business, in
         className="flex items-center justify-between gap-2 mt-2.5 pt-2.5 relative"
         style={{ borderTop: '1px solid var(--color-premium-border)', zIndex: 2 }}
       >
-        <span className="font-bold text-[15px] flex-shrink-0" style={{ color: imageAccent }}>
-          ₹{formatShort(business.cost)}
-        </span>
+        {isMaxLevel ? (
+          /* At max level there's nothing left to buy — the price and
+             Upgrade button were previously left in place, showing a
+             stale number and a button that looked tappable but silently
+             did nothing when pressed (the purchase was already blocked
+             underneath). Replaced with a single, static, full-width
+             indicator instead — a real fix, not just decoration. Built
+             from the same embossed "recipe" as the Upgrade button below
+             (light top highlight, solid shadow lip for real depth) but
+             in a warm gold finish rather than any tier color, since this
+             is saying something different — "fully mastered," not "this
+             is tier N." Deliberately NOT wired to whileTap the way the
+             real button is: giving press feedback for an action that
+             does nothing would just recreate a milder version of the
+             same confusion this is fixing. */
+          <div
+            className="w-full py-2 rounded-full font-bold text-[12px] text-center"
+            style={{
+              background: 'linear-gradient(180deg, #FFE9A8 0%, #D4A72C 100%)',
+              color: '#4A3400',
+              boxShadow: '0 4px 0 #8A6A16, 0 7px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.6)',
+            }}
+          >
+            👑 PREMIUM
+          </div>
+        ) : (
+          <>
+            <span className="font-bold text-[15px] flex-shrink-0" style={{ color: imageAccent }}>
+              ₹{formatShort(business.cost)}
+            </span>
 
-        {/* CTA — visually a button, but this whole card is already a
-            <button> (onSelect above), so this stays a <div> to avoid
-            nesting interactive elements; tapping anywhere on the card,
-            including here, opens the same detail sheet. Built from the
-            same pressable "recipe" (gradient face, solid lip shadow, real
-            depress on tap) as .btn-premium-pressable, via inline styles
-            here instead of the static CSS class, so the face/lip colors
-            can be derived from this business's own level color. */}
-        <motion.div
-          whileTap={{ y: 3, boxShadow: `0 1px 0 ${darkenHex(imageAccent, 0.35)}, 0 2px 5px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.5)` }}
-          className="px-4 py-2 rounded-full font-bold text-[11.5px] flex-shrink-0"
-          style={{
-            background: `linear-gradient(180deg, ${lightenHex(imageAccent, 0.35)} 0%, ${imageAccent} 100%)`,
-            color: 'var(--color-premium-text-inverse)',
-            boxShadow: `0 4px 0 ${darkenHex(imageAccent, 0.35)}, 0 7px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.5)`,
-          }}
-        >
-          {isOwned ? 'Upgrade' : 'Buy'}
-        </motion.div>
+            {/* CTA — visually a button, but this whole card is already a
+                <button> (onSelect above), so this stays a <div> to avoid
+                nesting interactive elements; tapping anywhere on the card,
+                including here, opens the same detail sheet. Built from the
+                same pressable "recipe" (gradient face, solid lip shadow, real
+                depress on tap) as .btn-premium-pressable, via inline styles
+                here instead of the static CSS class, so the face/lip colors
+                can be derived from this business's own level color. */}
+            <motion.div
+              whileTap={{ y: 3, boxShadow: `0 1px 0 ${darkenHex(imageAccent, 0.35)}, 0 2px 5px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.5)` }}
+              className="px-4 py-2 rounded-full font-bold text-[11.5px] flex-shrink-0"
+              style={{
+                background: `linear-gradient(180deg, ${lightenHex(imageAccent, 0.35)} 0%, ${imageAccent} 100%)`,
+                color: 'var(--color-premium-text-inverse)',
+                boxShadow: `0 4px 0 ${darkenHex(imageAccent, 0.35)}, 0 7px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.5)`,
+              }}
+            >
+              {isOwned ? 'Upgrade' : 'Buy'}
+            </motion.div>
+          </>
+        )}
       </div>
     </motion.button>
   );

@@ -58,6 +58,13 @@ export const DistrictNode: React.FC<DistrictNodeProps> = ({ district, onSelect, 
 
   const iconColor = status === 'locked' ? 'var(--color-premium-text-secondary)' : 'var(--color-premium-text)';
 
+  // Size hierarchy — the one district the player is actually in reads as
+  // visibly the most prominent thing on the whole map; locked districts
+  // (not relevant yet) sit smaller and quieter. An earlier version gave
+  // every node the exact same size regardless of relevance, which is
+  // part of why the whole map read as flat and undifferentiated.
+  const nodeRadius = isCurrent ? 38 : status === 'locked' ? 27 : 32;
+
   return (
     <g
       transform={`translate(${district.x}, ${district.y})`}
@@ -86,6 +93,13 @@ export const DistrictNode: React.FC<DistrictNodeProps> = ({ district, onSelect, 
         </g>
       )}
 
+      {/* Platform base — a soft, dark elevated ellipse the node visually
+          "sits on," reinforcing that this is a physical place on a
+          terrain, not a flat icon floating in empty space. Distinct from
+          the neutral elevation shadow below (locked-only, much fainter);
+          this one is present under every node regardless of status. */}
+      <ellipse cx="0" cy={nodeRadius * 0.82} rx={nodeRadius * 0.85} ry={nodeRadius * 0.22} fill="#000000" opacity="0.35" style={{ filter: 'blur(2px)' }} />
+
       {/* Neutral elevation shadow — kept for locked districts only, where
           there's no progress yet to glow about. */}
       {status === 'locked' && (
@@ -100,27 +114,46 @@ export const DistrictNode: React.FC<DistrictNodeProps> = ({ district, onSelect, 
           matching its status color. */}
       {status !== 'locked' && (
         <circle
-          r={38 + (status === 'completed' ? 6 : Math.round((completionPercent / 100) * 6))}
+          r={nodeRadius + 6 + (status === 'completed' ? 6 : Math.round((completionPercent / 100) * 6))}
           fill={status === 'completed' ? 'var(--color-premium-green-500)' : 'var(--color-premium-gold-400)'}
           opacity={status === 'completed' ? 0.28 : 0.08 + (completionPercent / 100) * 0.22}
           style={{ transition: 'r 0.7s ease, opacity 0.7s ease' }}
         />
       )}
 
-      {/* Main node disc — enlarged to give the illustrated icon real room.
-          Border transitions smoothly (not a snap) when status changes —
-          same "road lights up" principle as RoadPath. */}
+      {/* Main node disc — a real embossed dome now (radial gradient
+          fill lighter at the upper-left, darker toward the edge, plus a
+          thin inner highlight ring) rather than one flat fill color, so
+          it reads as a physical raised platform rather than a flat
+          painted circle. Border transitions smoothly (not a snap) when
+          status changes — same "road lights up" principle as RoadPath.
+          Uses the dynamic nodeRadius so the current district's larger
+          size and a locked district's smaller size both actually apply
+          here, not just to the glow/shadow around it. */}
+      <defs>
+        <radialGradient id={`node-fill-${district.id}`} cx="35%" cy="30%" r="75%">
+          <stop offset="0%" stopColor="var(--color-premium-elevated)" />
+          <stop offset="100%" stopColor="var(--color-premium-surface)" />
+        </radialGradient>
+      </defs>
       <circle
-        r="32"
-        fill="var(--color-premium-surface)"
+        r={nodeRadius}
+        fill={`url(#node-fill-${district.id})`}
         stroke={borderColor}
         strokeWidth={status === 'locked' ? 1.5 : 2}
-        style={{ transition: 'stroke 0.7s ease, stroke-width 0.7s ease' }}
+        style={{ transition: 'stroke 0.7s ease, stroke-width 0.7s ease, r 0.4s ease' }}
+      />
+      <circle
+        r={nodeRadius - 2}
+        fill="none"
+        stroke="rgba(255,255,255,0.18)"
+        strokeWidth="1"
+        style={{ transition: 'r 0.4s ease' }}
       />
 
       {/* Illustrated 3D district icon, or the original line-icon as a
           fallback if this district's art fails to load */}
-      <foreignObject x="-11" y="-11" width="22" height="22" style={{ pointerEvents: 'none' }}>
+      <foreignObject x={-nodeRadius * 0.34} y={-nodeRadius * 0.34} width={nodeRadius * 0.69} height={nodeRadius * 0.69} style={{ pointerEvents: 'none' }}>
         <div className="w-full h-full flex items-center justify-center">
           {iconFailed ? (
             <FallbackIcon size={14} strokeWidth={1.75} color={iconColor} />
@@ -138,7 +171,7 @@ export const DistrictNode: React.FC<DistrictNodeProps> = ({ district, onSelect, 
 
       {/* Lock indicator for locked districts */}
       {status === 'locked' && (
-        <g transform="translate(21, -21)">
+        <g transform={`translate(${nodeRadius * 0.66}, ${-nodeRadius * 0.66})`}>
           <circle r="8" fill="var(--color-premium-bg)" stroke="var(--color-premium-border)" strokeWidth="1" />
           <foreignObject x="-5" y="-5" width="10" height="10">
             <div className="w-full h-full flex items-center justify-center">
@@ -150,7 +183,7 @@ export const DistrictNode: React.FC<DistrictNodeProps> = ({ district, onSelect, 
 
       {/* Elegant checkmark for completed districts */}
       {status === 'completed' && (
-        <g transform="translate(21, -21)">
+        <g transform={`translate(${nodeRadius * 0.66}, ${-nodeRadius * 0.66})`}>
           <circle r="8" fill="var(--color-premium-green-500)" />
           <foreignObject x="-5" y="-5" width="10" height="10">
             <div className="w-full h-full flex items-center justify-center">

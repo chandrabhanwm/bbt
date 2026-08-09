@@ -68,8 +68,12 @@ export const RoadPath: React.FC<RoadPathProps> = ({ id, from, to, active, travel
     <g>
       {/* Road bed — thick, always full opacity, always the same neutral
           tone. This is "the road exists," independent of whether it's
-          currently usable. */}
-      <path d={d} stroke="var(--color-premium-border)" strokeWidth={10} fill="none" strokeLinecap="round" />
+          currently usable. A dedicated visible stone-gray rather than
+          the generic UI border token (which is a very low-opacity teal
+          meant for subtle panel edges, not a prominent map feature) —
+          reused here it made the whole road read as a faint thin line
+          rather than a substantial physical path. */}
+      <path d={d} stroke="#3A4A58" strokeWidth={11} fill="none" strokeLinecap="round" />
 
       {/* Soft white glow specifically for traveled roads — a plain color
           change wouldn't read as "glowing," this adds a real blurred
@@ -94,6 +98,18 @@ export const RoadPath: React.FC<RoadPathProps> = ({ id, from, to, active, travel
         opacity={traveled ? 1 : active ? 0.95 : 0.68}
         style={{ transition: 'stroke 0.7s ease, opacity 0.7s ease' }}
       />
+
+      {/* A second, independent "this route is alive" signal alongside
+          the car — a soft glowing dot traveling the same path on its own
+          loop. Two different traveling elements at different speeds
+          read as genuine, ambient activity rather than one single
+          mechanical animation; if the car icon is ever missing or slow
+          to load, the road still visibly pulses. */}
+      {active && (
+        <circle r="4" fill="var(--color-premium-gold-400)" opacity="0.9" style={{ filter: 'blur(1px)' }}>
+          <animateMotion path={d} dur={`${duration * 0.6}s`} begin={`${beginOffset - 2}s`} repeatCount="indefinite" />
+        </circle>
+      )}
 
       {/* Brief single fade — a district touching this road just completed.
           Opacity only, per the "fade/opacity, no flashy" motion rule. */}
