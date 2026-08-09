@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'motion/react';
+import { ParticleBurst } from './ParticleBurst';
 
 export interface MilestoneData {
   icon: string;
@@ -16,104 +17,6 @@ const COLOR_HEX: Record<MilestoneData['color'], string> = {
   teal: '#40E0D0',
 };
 
-interface Particle {
-  x: number; y: number; vx: number; vy: number;
-  rotation: number; vRotation: number;
-  size: number; color: string; shape: 'square' | 'circle' | 'star';
-  life: number; maxLife: number;
-}
-
-function drawStar(ctx: CanvasRenderingContext2D, size: number) {
-  ctx.beginPath();
-  for (let i = 0; i < 5; i++) {
-    const angle = (i * 2 * Math.PI) / 5 - Math.PI / 2;
-    const x = Math.cos(angle) * size;
-    const y = Math.sin(angle) * size;
-    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-    const innerAngle = angle + Math.PI / 5;
-    ctx.lineTo(Math.cos(innerAngle) * size * 0.45, Math.sin(innerAngle) * size * 0.45);
-  }
-  ctx.closePath();
-}
-
-/** Real canvas particle system — replaces the earlier DOM-animated-div
- *  confetti entirely. Gravity, per-particle rotation, deceleration, and
- *  three distinct shapes (not one rectangle repeated in different
- *  colors) running on requestAnimationFrame. Canvas handles this volume
- *  of physically-simulated particles far more cheaply than animating
- *  90 individual DOM elements would. */
-const ParticleCanvas: React.FC<{ width: number; height: number; accentHex: string }> = ({ width, height, accentHex }) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const colors = [accentHex, '#FFD700', '#40E0D0', '#FF6B6B', '#4ADE80', '#60A5FA'];
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || width <= 0 || height <= 0) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = width * dpr;
-    canvas.height = height * dpr;
-    ctx.scale(dpr, dpr);
-
-    const particles: Particle[] = [];
-    const centerX = width / 2;
-    const centerY = height * 0.32;
-    for (let i = 0; i < 90; i++) {
-      const angle = Math.random() * Math.PI * 2;
-      const speed = 3 + Math.random() * 8;
-      particles.push({
-        x: centerX, y: centerY,
-        vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - 3,
-        rotation: Math.random() * 360, vRotation: (Math.random() - 0.5) * 20,
-        size: 4 + Math.random() * 6,
-        color: colors[i % colors.length],
-        shape: (['square', 'circle', 'star'] as const)[i % 3],
-        life: 0, maxLife: 70 + Math.random() * 50,
-      });
-    }
-
-    let raf: number;
-    const gravity = 0.35;
-    function tick() {
-      ctx!.clearRect(0, 0, width, height);
-      particles.forEach((p) => {
-        if (p.life >= p.maxLife) return;
-        p.vy += gravity;
-        p.vx *= 0.99;
-        p.x += p.vx; p.y += p.vy;
-        p.rotation += p.vRotation;
-        p.life++;
-        const fadeStart = p.maxLife * 0.7;
-        const opacity = p.life > fadeStart ? Math.max(0, 1 - (p.life - fadeStart) / (p.maxLife - fadeStart)) : 1;
-
-        ctx!.save();
-        ctx!.translate(p.x, p.y);
-        ctx!.rotate((p.rotation * Math.PI) / 180);
-        ctx!.globalAlpha = opacity;
-        ctx!.fillStyle = p.color;
-        if (p.shape === 'circle') {
-          ctx!.beginPath(); ctx!.arc(0, 0, p.size / 2, 0, Math.PI * 2); ctx!.fill();
-        } else if (p.shape === 'star') {
-          drawStar(ctx!, p.size / 2); ctx!.fill();
-        } else {
-          ctx!.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
-        }
-        ctx!.restore();
-      });
-      raf = requestAnimationFrame(tick);
-    }
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [width, height, accentHex]);
-
-  return <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, width, height, pointerEvents: 'none' }} />;
-};
-
-/** Rotating light rays behind the icon — a conic gradient spun via CSS
- *  transform. Distinct from the earlier radial-gradient "soft halo"
- *  glow: this reads as a directional burst of light radiating outward,
- *  not just an ambient bloom. */
 const LightRays: React.FC<{ color: string }> = ({ color }) => (
   <motion.div
     style={{
@@ -160,7 +63,7 @@ export const MilestoneOverlay: React.FC<{ data: MilestoneData }> = ({ data }) =>
       transition={{ duration: shakeKey ? 0.35 : 0.25, ease: 'easeOut' }}
     >
       <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(circle at 50% 40%, rgba(20,30,45,0.8), rgba(5,10,18,0.95))` }} />
-      <ParticleCanvas width={size.width} height={size.height} accentHex={accentHex} />
+      <ParticleBurst width={size.width} height={size.height} accentHex={accentHex} count={90} originY={0.32} />
       <LightRays color={accentHex} />
 
       <motion.div

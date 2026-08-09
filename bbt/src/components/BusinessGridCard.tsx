@@ -4,7 +4,7 @@ import { Lock } from 'lucide-react';
 import { Business } from '../types';
 import { CoinIcon } from './CoinIcon';
 import { BusinessPhoto, BusinessIcon } from './BusinessPhoto';
-import { CoinBurst } from './FX';
+import { ParticleBurst } from './ParticleBurst';
 import { playTap } from '../utils/audio';
 import { getBusinessCategory } from '../data/businessCategoryPresentation';
 import { getDisplayLevelLabel } from '../utils/strategyEngine';
@@ -144,7 +144,7 @@ export const BusinessGridCard: React.FC<BusinessGridCardProps> = ({ business, in
     >
       {celebrating && (
         <>
-          <CoinBurst count={7} />
+          <ParticleBurst width={175} height={300} accentHex="#D4A72C" count={26} originY={0.22} />
           <motion.div
             className="absolute -top-2 left-1/2 z-20 px-2.5 py-1 rounded-full font-bold text-[10px] whitespace-nowrap pointer-events-none flex items-center gap-1"
             style={{

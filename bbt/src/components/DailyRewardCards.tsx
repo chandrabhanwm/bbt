@@ -4,7 +4,7 @@ import { Clock, Gift } from 'lucide-react';
 import { RewardCard } from '../types';
 import { formatCash } from '../utils/formatCash';
 import { CoinIcon } from './CoinIcon';
-import { CoinBurst } from './FX';
+import { ParticleBurst } from './ParticleBurst';
 import { CountUpNumber } from './CountUpNumber';
 import { CountdownClock } from './CountdownClock';
 import { playClick, playUnlock } from '../utils/audio';
@@ -210,7 +210,9 @@ export const DailyRewardCards: React.FC<DailyRewardCardsProps> = ({ cards, onScr
                   transition={{ duration: 0.4, times: [0, 0.7, 1], ease: 'easeOut' }}
                   className="absolute inset-0 flex flex-col items-center justify-center p-2 gap-1.5"
                 >
-                  {justRevealedIndex === index && <CoinBurst count={card.tier === 'rare' ? 18 : 10} emoji={card.tier === 'rare' ? '💎' : '✨'} />}
+                  {justRevealedIndex === index && (
+                    <ParticleBurst width={110} height={108} accentHex={card.tier === 'rare' ? '#60A5FA' : '#FFD700'} count={card.tier === 'rare' ? 36 : 22} originY={0.5} />
+                  )}
                   <div className="relative flex items-center justify-center">
                     {card.tier === 'rare' && justRevealedIndex === index && (
                       <motion.div
