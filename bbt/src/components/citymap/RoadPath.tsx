@@ -73,7 +73,8 @@ export const RoadPath: React.FC<RoadPathProps> = ({ id, from, to, active, travel
           meant for subtle panel edges, not a prominent map feature) —
           reused here it made the whole road read as a faint thin line
           rather than a substantial physical path. */}
-      <path d={d} stroke="#3A4A58" strokeWidth={11} fill="none" strokeLinecap="round" />
+      <path d={d} stroke="#5A6E80" strokeWidth={12} fill="none" strokeLinecap="round" />
+      <path d={d} stroke="#7A92A6" strokeWidth={5} fill="none" strokeLinecap="round" opacity="0.5" />
 
       {/* Soft white glow specifically for traveled roads — a plain color
           change wouldn't read as "glowing," this adds a real blurred

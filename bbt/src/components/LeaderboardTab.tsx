@@ -225,11 +225,9 @@ const LeaderboardTable: React.FC<{
       >
         <span className="w-7 text-center text-[9px] font-bold tracking-wide flex-shrink-0" style={{ color: 'var(--color-premium-text-secondary)' }}>RANK</span>
         <span className="flex-1 text-[9px] font-bold tracking-wide" style={{ color: 'var(--color-premium-text-secondary)' }}>PLAYER</span>
-        {valueType === 'cash' && (
-          <span className="w-16 text-center text-[9px] font-bold tracking-wide flex-shrink-0" style={{ color: 'var(--color-premium-text-secondary)' }}>BUSINESSES</span>
-        )}
+        <span className="w-16 text-center text-[9px] font-bold tracking-wide flex-shrink-0" style={{ color: 'var(--color-premium-text-secondary)' }}>BUSINESSES</span>
         <span className="w-20 text-right text-[9px] font-bold tracking-wide flex-shrink-0" style={{ color: 'var(--color-premium-text-secondary)' }}>
-          {valueType === 'cash' ? '₹/MIN' : 'POINTS'}
+          {valueType === 'cash' ? 'INCOME/MIN' : 'POINTS'}
         </span>
       </div>
 
@@ -286,11 +284,9 @@ const LeaderboardTable: React.FC<{
               </span>
             </div>
 
-            {valueType === 'cash' && (
-              <span className="w-16 text-center text-[13px] font-bold flex-shrink-0" style={{ color: 'var(--color-premium-text)' }}>
-                {entry.distinctBusinessesOwned}
-              </span>
-            )}
+            <span className="w-16 text-center text-[13px] font-bold flex-shrink-0" style={{ color: 'var(--color-premium-text)' }}>
+              {entry.distinctBusinessesOwned}
+            </span>
 
             <span
               className="w-20 text-right text-[12.5px] font-bold flex-shrink-0"

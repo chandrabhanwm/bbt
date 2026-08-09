@@ -63,7 +63,7 @@ export const DistrictNode: React.FC<DistrictNodeProps> = ({ district, onSelect, 
   // (not relevant yet) sit smaller and quieter. An earlier version gave
   // every node the exact same size regardless of relevance, which is
   // part of why the whole map read as flat and undifferentiated.
-  const nodeRadius = isCurrent ? 38 : status === 'locked' ? 27 : 32;
+  const nodeRadius = isCurrent ? 46 : status === 'locked' ? 24 : 32;
 
   return (
     <g

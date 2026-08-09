@@ -97,15 +97,17 @@ export const CityMapScreen: React.FC<CityMapScreenProps> = ({ onOpenDistrict, on
     <div
       className="relative w-full h-full overflow-hidden select-none"
       style={{
-        // Layered terrain zones instead of one flat radial gradient — a
-        // few large, soft, differently-tinted patches (warm near the
-        // starting district, cooler toward the unexplored edges) so the
-        // world reads as having actual varied regions, not a single flat
-        // vignette repeated everywhere.
+        // Layered terrain zones — boosted to genuinely visible strength.
+        // An earlier pass used 0.06-0.10 opacity here, which read as
+        // essentially invisible on a real device screen — the same
+        // mistake already made and corrected once before on the
+        // business card glow. This time the values are strong enough
+        // to actually register at a glance, not just technically present
+        // in the DOM.
         background: `
-          radial-gradient(55% 40% at 25% 85%, rgba(212,167,44,0.10) 0%, transparent 100%),
-          radial-gradient(50% 35% at 75% 15%, rgba(45,190,200,0.08) 0%, transparent 100%),
-          radial-gradient(60% 45% at 70% 70%, rgba(120,80,180,0.06) 0%, transparent 100%),
+          radial-gradient(55% 40% at 25% 85%, rgba(212,167,44,0.28) 0%, transparent 100%),
+          radial-gradient(50% 35% at 75% 15%, rgba(45,190,200,0.22) 0%, transparent 100%),
+          radial-gradient(60% 45% at 70% 70%, rgba(150,90,220,0.20) 0%, transparent 100%),
           radial-gradient(120% 90% at 50% 35%, var(--color-premium-elevated) 0%, var(--color-premium-bg) 75%)
         `,
       }}
@@ -150,10 +152,10 @@ export const CityMapScreen: React.FC<CityMapScreenProps> = ({ onOpenDistrict, on
           clearly as "a cloud" up close. */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
         {[
-          { top: '8%', size: 180, duration: 42, opacity: 0.05 },
-          { top: '22%', size: 130, duration: 55, opacity: 0.04 },
-          { top: '45%', size: 220, duration: 65, opacity: 0.045 },
-          { top: '68%', size: 150, duration: 48, opacity: 0.04 },
+          { top: '8%', size: 220, duration: 42, opacity: 0.14 },
+          { top: '22%', size: 160, duration: 55, opacity: 0.11 },
+          { top: '45%', size: 260, duration: 65, opacity: 0.13 },
+          { top: '68%', size: 190, duration: 48, opacity: 0.12 },
         ].map((cloud, i) => (
           <motion.div
             key={i}
