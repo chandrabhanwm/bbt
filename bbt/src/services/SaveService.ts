@@ -89,6 +89,9 @@ export interface LeaderboardEntry {
    *  there. This field is always a fresh count of real ownership, never
    *  inflated by repeat investment in the same business. */
   distinctBusinessesOwned: number;
+  /** Sum of every business's level across every district — 0 to 480 —
+   *  what the leaderboard's prestige badge icon is actually keyed off. */
+  totalLevelSum: number;
 }
 
 /**

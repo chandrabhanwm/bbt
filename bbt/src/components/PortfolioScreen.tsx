@@ -6,7 +6,7 @@ import { PlayerStats, Business } from '../types';
 import { bastiCity } from '../data/cityMapData';
 import { getDistrictProgress, getEmpireTotalInvested } from '../utils/districtProgress';
 import { derivePlayerId } from '../utils/playerIdentity';
-import { computeAchievements } from '../utils/achievements';
+import { PRESTIGE_BADGES, getTotalLevelSum } from '../data/prestigeBadges';
 import { getLegacyStatus } from '../utils/legacy';
 import { CoinIcon } from './CoinIcon';
 import { formatCash } from '../utils/formatCash';
@@ -62,10 +62,13 @@ export const PortfolioScreen: React.FC<PortfolioScreenProps> = ({
   const xpPct = Math.min(100, Math.round((stats.xp / Math.max(1, stats.nextLevelXp)) * 100));
   const playerId = derivePlayerId(playerName);
 
-  // Achievements now come from the shared computeAchievements() utility —
-  // the same function App.tsx's global unlock-detection effect uses, so
-  // there's one definition of "unlocked," not two that could drift apart.
-  const achievements = computeAchievements(stats, businessesByDistrict);
+  // Prestige badges replace the old achievement list entirely — a
+  // single, unbounded (well, 0-480, but not artificially small)
+  // progress number instead of 27 separate flags, and every threshold
+  // genuinely earnable, unlike an XP-based system would have been (see
+  // prestigeBadges.ts for the full reasoning on why total level sum was
+  // chosen over XP).
+  const totalLevelSum = getTotalLevelSum(businessesByDistrict);
 
   // Districts with at least one owned business, with their real progress
   const districtsOwned = bastiCity.districts
@@ -445,52 +448,63 @@ export const PortfolioScreen: React.FC<PortfolioScreenProps> = ({
         })}
       </div>
 
-      {/* Achievements — minimal single icon, no colorful badges */}
-      <SectionLabel icon={<Award size={13} color="var(--color-premium-gold-400)" />}>Achievements</SectionLabel>
+      {/* Prestige badges — replaces the old 27-achievement list entirely.
+          Every badge is always shown, not just earned ones — locked
+          badges stay visible but grayed out with a progress bar, so a
+          player can see exactly what's next and feel the pull toward
+          completing the set, the same "trophy case" reasoning behind
+          keeping locked achievements visible before. */}
+      <SectionLabel icon={<Award size={13} color="var(--color-premium-gold-400)" />}>Prestige Badges</SectionLabel>
       <div className="space-y-2.5">
-        {achievements.map((ach) => (
-          <div
-            key={ach.id}
-            className="rounded-2xl p-3 flex items-center gap-3"
-            style={{
-              backgroundColor: 'var(--color-premium-surface)',
-              border: `1.5px solid ${ach.unlocked ? 'var(--color-premium-gold-400)' : 'var(--color-premium-border)'}`,
-              opacity: ach.unlocked ? 1 : 0.6,
-            }}
-          >
+        {PRESTIGE_BADGES.map((badge) => {
+          const unlocked = totalLevelSum >= badge.threshold;
+          const progress = Math.min(100, Math.round((totalLevelSum / badge.threshold) * 100));
+          return (
             <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-              style={{ backgroundColor: 'var(--color-premium-elevated)', border: '1.5px solid var(--color-premium-border)' }}
+              key={badge.threshold}
+              className="rounded-2xl p-3 flex items-center gap-3"
+              style={{
+                backgroundColor: 'var(--color-premium-surface)',
+                border: `1.5px solid ${unlocked ? 'var(--color-premium-gold-400)' : 'var(--color-premium-border)'}`,
+                opacity: unlocked ? 1 : 0.6,
+              }}
             >
-              <Award size={17} color={ach.unlocked ? 'var(--color-premium-gold-400)' : 'var(--color-premium-text-secondary)'} strokeWidth={1.75} />
-            </div>
+              <div
+                className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-[18px]"
+                style={{ backgroundColor: 'var(--color-premium-elevated)', border: '1.5px solid var(--color-premium-border)' }}
+              >
+                {badge.icon}
+              </div>
 
-            <div className="flex-1 min-w-0">
-              <div className="flex justify-between items-center gap-2">
-                <h4 className="font-bold text-[11px] truncate" style={{ color: ach.unlocked ? 'var(--color-premium-text)' : 'var(--color-premium-text-secondary)' }}>
-                  {ach.title}
-                </h4>
-                {ach.unlocked && (
-                  <span
-                    className="text-[8px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full flex-shrink-0"
-                    style={{ backgroundColor: 'var(--color-premium-elevated)', color: 'var(--color-premium-green-500)', border: '1px solid var(--color-premium-green-500)' }}
-                  >
-                    Unlocked
-                  </span>
-                )}
-              </div>
-              <p className="text-[9.5px] leading-snug mt-1" style={{ color: 'var(--color-premium-text-secondary)' }}>
-                {ach.desc}
-              </p>
-              <div className="w-full h-1 rounded-full mt-2 overflow-hidden" style={{ backgroundColor: 'var(--color-premium-track)' }}>
-                <div
-                  className="h-full rounded-full"
-                  style={{ width: `${ach.progress}%`, backgroundColor: ach.unlocked ? 'var(--color-premium-gold-400)' : 'var(--color-premium-border-strong)' }}
-                />
+              <div className="flex-1 min-w-0">
+                <div className="flex justify-between items-center gap-2">
+                  <h4 className="font-bold text-[11px] truncate" style={{ color: unlocked ? 'var(--color-premium-text)' : 'var(--color-premium-text-secondary)' }}>
+                    {badge.name}
+                  </h4>
+                  {unlocked && (
+                    <span
+                      className="text-[8px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: 'var(--color-premium-elevated)', color: 'var(--color-premium-green-500)', border: '1px solid var(--color-premium-green-500)' }}
+                    >
+                      Unlocked
+                    </span>
+                  )}
+                </div>
+                <p className="text-[9.5px] leading-snug mt-1" style={{ color: 'var(--color-premium-text-secondary)' }}>
+                  {badge.threshold === 480
+                    ? 'Fully master every business in every district.'
+                    : `Reach ${badge.threshold} total business levels across CoralBay.`}
+                </p>
+                <div className="w-full h-1 rounded-full mt-2 overflow-hidden" style={{ backgroundColor: 'var(--color-premium-track)' }}>
+                  <div
+                    className="h-full rounded-full"
+                    style={{ width: `${progress}%`, backgroundColor: unlocked ? 'var(--color-premium-gold-400)' : 'var(--color-premium-border-strong)' }}
+                  />
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
 

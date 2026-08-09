@@ -3,6 +3,7 @@ import { Business, PlayerStats } from '../types';
 import { auth } from '../firebase/config';
 import { SaveService, GameSave, LeaderboardEntry } from '../services/SaveService';
 import { getEmpireTotalInvested, getDistinctBusinessesOwnedCount } from '../utils/districtProgress';
+import { getTotalLevelSum } from '../data/prestigeBadges';
 import { getPendingReferralUid, clearPendingReferral } from '../utils/referral';
 import { progressionConfig, CURRENT_SAVE_VERSION } from '../config/progressionConfig';
 import { applyContestPoints, todayDateString } from '../utils/weeklyContest';
@@ -229,6 +230,7 @@ export function useCloudSync(params: UseCloudSyncParams) {
         currentDistrictId: districtId, totalPlayTimeSeconds: currentStats.totalPlayTimeSeconds, adsWatchedCount: currentStats.adsWatchedCount,
         businessesBoughtCount: currentStats.businessesBoughtCount, poolClaimsCount: currentStats.poolClaimsCount,
         distinctBusinessesOwned: getDistinctBusinessesOwnedCount(bbd),
+        totalLevelSum: getTotalLevelSum(bbd),
       });
       SaveService.fetchTopLeaderboard(20).then(setRealLeaderboard);
       SaveService.fetchMyRank(currentStats.profitPerMin).then(setMyRealRank);
@@ -269,6 +271,7 @@ export function useCloudSync(params: UseCloudSyncParams) {
         businessesBoughtCount: currentStats.businessesBoughtCount,
         poolClaimsCount: currentStats.poolClaimsCount,
         distinctBusinessesOwned: getDistinctBusinessesOwnedCount(bbd),
+        totalLevelSum: getTotalLevelSum(bbd),
       });
     }, 120000); // every 2 minutes
 

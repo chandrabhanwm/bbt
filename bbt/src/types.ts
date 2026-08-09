@@ -183,6 +183,11 @@ export interface PlayerStats {
    *  dailyDoubleClaimCount above but resets daily, while this one
    *  never resets. */
   poolClaimsCount: number;
+  /** The highest prestige badge threshold (total level sum) already
+   *  shown as a full-screen celebration — 0 means none yet. Prevents
+   *  the same badge celebration from firing again on every subsequent
+   *  purchase once a threshold has already been crossed and shown. */
+  highestBadgeCelebrated: number;
 
   /** Whether this player has made at least one pool claim since the
    *  2-hour cooldown was introduced. Defaults to false for every save,

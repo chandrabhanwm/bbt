@@ -6,6 +6,7 @@ import { playClick } from '../utils/audio';
 import { useCountUp } from '../utils/useCountUp';
 import { formatCash } from '../utils/formatCash';
 import { CoinIcon } from './CoinIcon';
+import { getCurrentBadge } from '../data/prestigeBadges';
 
 // Same props contract as before — App.tsx's call site needs no changes.
 interface HeaderProps {
@@ -29,6 +30,9 @@ interface HeaderProps {
    *  loading or if it can't be determined. Replaces the old fake
    *  cash-based climbing formula entirely. */
   realRank: number | null;
+  /** Sum of every business's level across every district — 0 to 480,
+   *  the single number the prestige badge system is built on. */
+  totalLevelSum: number;
 }
 
 const AVATAR_OPTIONS = [
@@ -59,7 +63,8 @@ export const Header: React.FC<HeaderProps> = ({
   cashPulseKey,
   onClaimPool,
   showProfitTapHint = false,
-  realRank
+  realRank,
+  totalLevelSum
 }) => {
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [editingName, setEditingName] = useState(false);
@@ -140,7 +145,14 @@ export const Header: React.FC<HeaderProps> = ({
                   <span className="text-[11px] font-bold text-white tracking-wide truncate">
                     {playerName}
                   </span>
-                  <Crown size={9} color={GOLD} fill={GOLD} className="flex-shrink-0" />
+                  {(() => {
+                    const badge = getCurrentBadge(totalLevelSum);
+                    return badge ? (
+                      <span className="flex-shrink-0 text-[10px]" title={badge.name}>{badge.icon}</span>
+                    ) : (
+                      <Crown size={9} color={GOLD} fill={GOLD} className="flex-shrink-0" />
+                    );
+                  })()}
                 </div>
                 <div className="text-[9px] font-semibold mt-0.5 whitespace-nowrap" style={{ color: TEXT_SECONDARY }}>
                   Level {stats.level} · {xpPct}%

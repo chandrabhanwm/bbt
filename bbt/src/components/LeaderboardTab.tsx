@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Users, Store, TrendingUp as UpgradeIcon, Wallet, Gift } from 'lucide-react';
 import { LeaderboardEntry } from '../services/SaveService';
 import { formatCash } from '../utils/formatCash';
+import { getCurrentBadge } from '../data/prestigeBadges';
 import { playClick } from '../utils/audio';
 import { formatCooldownClock } from '../utils/cooldown';
 
@@ -37,6 +38,9 @@ interface LeaderboardTabProps {
    *  getDistinctBusinessesOwnedCount for why these are genuinely
    *  different numbers. */
   playerDistinctBusinessesOwned: number;
+  /** Sum of every business's level across every district — 0 to 480,
+   *  what the prestige badge displayed next to each name is keyed off. */
+  playerTotalLevelSum: number;
   playerLevel: number;
   /** Weekly contest — same real-player-fetch pattern as the overall
    *  leaderboard above, just ordered by weeklyPoints instead of net
@@ -59,6 +63,7 @@ export const LeaderboardTab: React.FC<LeaderboardTabProps> = ({
   playerNetWorth,
   playerProfitPerMin,
   playerDistinctBusinessesOwned,
+  playerTotalLevelSum,
   playerLevel,
   weeklyContestBoard,
   myWeeklyRank,
@@ -97,7 +102,7 @@ export const LeaderboardTab: React.FC<LeaderboardTabProps> = ({
       ? {
           ...entry, playerName, avatarEmoji: playerAvatar, netWorth: playerNetWorth,
           profitPerMin: playerProfitPerMin, distinctBusinessesOwned: playerDistinctBusinessesOwned,
-          level: playerLevel, weeklyPoints: myWeeklyPoints,
+          totalLevelSum: playerTotalLevelSum, level: playerLevel, weeklyPoints: myWeeklyPoints,
         }
       : entry;
 
@@ -153,7 +158,7 @@ export const LeaderboardTab: React.FC<LeaderboardTabProps> = ({
             uid: myUid ?? 'me', playerName, avatarEmoji: playerAvatar, netWorth: playerNetWorth,
             profitPerMin: playerProfitPerMin, level: playerLevel, updatedAt: Date.now(), weeklyPoints: myWeeklyPoints,
             currentDistrictId: '', totalPlayTimeSeconds: 0, adsWatchedCount: 0, businessesBoughtCount: 0,
-            poolClaimsCount: 0, distinctBusinessesOwned: playerDistinctBusinessesOwned,
+            poolClaimsCount: 0, distinctBusinessesOwned: playerDistinctBusinessesOwned, totalLevelSum: playerTotalLevelSum,
           }}
         />
       )}
@@ -276,8 +281,12 @@ const LeaderboardTable: React.FC<{
             </div>
 
             <div className="flex-1 min-w-0">
-              <span className="text-[12.5px] font-bold truncate block" style={{ color: isMe ? 'var(--color-premium-gold-400)' : 'var(--color-premium-text)' }}>
-                {isMe ? 'You' : entry.playerName}
+              <span className="flex items-center gap-1 text-[12.5px] font-bold truncate" style={{ color: isMe ? 'var(--color-premium-gold-400)' : 'var(--color-premium-text)' }}>
+                <span className="truncate">{isMe ? 'You' : entry.playerName}</span>
+                {(() => {
+                  const badge = getCurrentBadge(entry.totalLevelSum);
+                  return badge ? <span className="flex-shrink-0 text-[11px]" title={badge.name}>{badge.icon}</span> : null;
+                })()}
               </span>
               <span className="text-[9px] font-medium whitespace-nowrap" style={{ color: 'var(--color-premium-text-secondary)' }}>
                 {formatCompactNetWorth(entry.netWorth)} net worth

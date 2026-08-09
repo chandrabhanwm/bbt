@@ -25,6 +25,7 @@ import { buildBusinessesForDistrict, districtEconomies, getDistrictTotalCost } f
 import { bastiCity, getDistrict } from './data/cityMapData';
 import { DistrictProvider, useDistrict } from './context/DistrictContext';
 import { getDistrictProgress, isDistrictCompleted, getDistrictCompletionReward, getEmpireTotalInvested, getDistinctBusinessesOwnedCount } from './utils/districtProgress';
+import { getTotalLevelSum, getCurrentBadge } from './data/prestigeBadges';
 import { generateDailyGoal } from './utils/dailyGoal';
 import { getLegacyIncomeMultiplier } from './utils/legacy';
 import { subscribeToAuthChanges, auth, signOutUser, checkRedirectResult, logAnalyticsEvent } from './firebase/config';
@@ -33,7 +34,6 @@ import { LoginScreen } from './components/LoginScreen';
 import { SimulatedAdModal } from './components/SimulatedAdModal';
 import { SaveService } from './services/SaveService';
 import { useCloudSync } from './hooks/useCloudSync';
-import { useAchievementDetection } from './hooks/useAchievementDetection';
 import { useClaimHandlers } from './hooks/useClaimHandlers';
 import { useBusinessActions } from './hooks/useBusinessActions';
 import { useNewsTicker } from './hooks/useNewsTicker';
@@ -210,6 +210,7 @@ function AppInner({ currentUid }: { currentUid: string }) {
     const freshDefaults: PlayerStats = {
       cash: 25000, // "Moment Zero" — enough for a couple of small early purchases, not a pre-filled empire. Scaled down alongside the rest of the economy's 1.9x reduction — ₹50,000 against the new, cheaper costs was quietly buying 3 businesses immediately instead of the originally-intended "about one."
       profitPerMin: 0, // Nothing owned yet — Tea Stall is no longer pre-owned, per Moment Zero
+      highestBadgeCelebrated: 0,
       // rank removed — replaced by a real, separately-fetched leaderboard rank
       level: 1,
       xp: 0,
@@ -768,33 +769,39 @@ function AppInner({ currentUid }: { currentUid: string }) {
     });
   }, [businessesByDistrict]);
 
-  // MILESTONE: achievement unlock — global detection, not scoped to
-  // whichever screen happens to be open. Previously, achievements were
-  // only ever computed inside PortfolioScreen, meaning an unlock that
-  // happened while the player was on Home would go completely unnoticed
-  // until they next opened Portfolio. This runs continuously instead,
-  // same "first check just records a baseline" pattern as the district
-  // thresholds above — so a returning player with already-unlocked
-  // achievements doesn't get a false celebration the instant the app
-  // opens fresh (this ref, like the others, is intentionally not
-  // persisted across sessions).
-  // Achievement detection + permanent persistence — extracted into its
-  // own hook per the Phase 0 architecture cleanup
-  // (src/hooks/useAchievementDetection.ts). Behavior preserved exactly.
-  useAchievementDetection({
-    stats, businessesByDistrict, setStats,
-    onUnlock: (newlyUnlocked) => {
+  // Prestige badge celebration — full-screen takeover, reusing the exact
+  // same MilestoneOverlay built for Level Up / District Complete, since
+  // this deserves the same "feels like a real achievement" treatment.
+  // Compares the current highest-earned badge (by total level sum, 0 to
+  // 480 across every business in every district) against
+  // highestBadgeCelebrated, which is persisted in PlayerStats — not a
+  // useRef — specifically so a badge already celebrated once never
+  // fires again after a reload, and so a player already past a
+  // threshold when this feature first ships still gets to see it once,
+  // rather than silently missing every badge they'd already earned.
+  useEffect(() => {
+    const totalLevelSum = getTotalLevelSum(businessesByDistrict);
+    const current = getCurrentBadge(totalLevelSum);
+    if (current && current.threshold > stats.highestBadgeCelebrated) {
       playLevelUp();
-      pushNewsEvent(`🏅 ${newlyUnlocked.title} unlocked!`);
       setMilestone({
-        icon: '🏅',
-        title: 'Achievement Unlocked!',
-        message: newlyUnlocked.title,
-        bonusText: newlyUnlocked.desc,
+        icon: current.icon,
+        title: `${current.icon} ${current.name}`,
+        message: `You've reached ${totalLevelSum} total business levels across CoralBay.`,
+        bonusText: current.threshold === 480 ? 'Every business, fully mastered.' : 'A new prestige badge, unlocked.',
         color: 'gold',
       });
-    },
-  });
+      setStats((prev) => ({ ...prev, highestBadgeCelebrated: current.threshold }));
+    }
+  }, [businessesByDistrict]);
+
+  // Achievement detection removed — replaced by the prestige badge
+  // system (data/prestigeBadges.ts), which now owns both the
+  // celebration and the display in Portfolio. Running both would mean
+  // two separate, overlapping "you unlocked something" popups for
+  // largely the same kind of progress. unlockedAchievementIds itself is
+  // left alone in PlayerStats (still referenced by the Legacy reset
+  // logic), just no longer actively detected or celebrated.
 
 
   // LOCKED DISTRICT PREVIEW MODE: if the district being previewed becomes
@@ -1045,6 +1052,7 @@ function AppInner({ currentUid }: { currentUid: string }) {
           onClaimPool={handleHeaderClaimPool}
           showProfitTapHint={showProfitTapHintRef.current}
           realRank={myRealRank}
+          totalLevelSum={getTotalLevelSum(businessesByDistrict)}
         />
 
         {/* 2. DYNAMIC MAIN TAB SCREEN COMPOSITIONS (Scrollable) */}
@@ -1167,6 +1175,7 @@ function AppInner({ currentUid }: { currentUid: string }) {
                   playerNetWorth={stats.cash + getEmpireTotalInvested(businessesByDistrict)}
                   playerProfitPerMin={stats.profitPerMin}
                   playerDistinctBusinessesOwned={getDistinctBusinessesOwnedCount(businessesByDistrict)}
+                  playerTotalLevelSum={getTotalLevelSum(businessesByDistrict)}
                   playerLevel={stats.level}
                   weeklyContestBoard={weeklyContestBoard}
                   myWeeklyRank={myWeeklyRank}

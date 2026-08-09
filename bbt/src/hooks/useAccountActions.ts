@@ -59,6 +59,7 @@ export function useAccountActions({
       setStats({
         cash: 25000,
         profitPerMin: 0,
+        highestBadgeCelebrated: 0,
         // rank removed — replaced by a real, separately-fetched leaderboard rank
         level: 1,
         xp: 0,
