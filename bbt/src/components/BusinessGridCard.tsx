@@ -33,21 +33,25 @@ interface BusinessGridCardProps {
   contestPointsCelebrating?: boolean;
 }
 
-/** Level-tier colors for a business's card — every level from L1 onward
- *  gets its own distinct color, so a player can tell a business's exact
- *  level at a glance from color alone, before even reading the "LEVEL X"
- *  badge. Levels 7+ reuse the L6 diamond/purple tier rather than
- *  inventing more colors, since the strategy-layer economy caps every
- *  business at exactly level 6 — only a legacy (pre-strategy-layer)
- *  business could ever exceed it. */
-function getLevelTierColor(level: number): { border: string; glow: string; tint: string } | null {
+/** Level-tier identity for a business's card — every level from L1 onward
+ *  gets its own distinct color AND a visible corner medallion, so a
+ *  player can tell a business's exact tier at a glance from across the
+ *  screen, not just up close. An earlier version relied on a thin
+ *  border plus a very subtle glow — reported as "invisible" in real use,
+ *  since soft box-shadows and low-opacity tints just don't read on a
+ *  small phone screen with many cards on it at once. This version is
+ *  deliberately louder: a thick, fully-saturated border, a continuously
+ *  pulsing glow (not just a one-time flash on upgrade), and a solid,
+ *  high-contrast medallion badge in the corner — three independent,
+ *  unmistakable signals instead of one subtle one. */
+function getLevelTierColor(level: number): { border: string; glow: string; tint: string; label: string } | null {
   switch (level) {
-    case 1: return { border: '#C87F4A', glow: 'rgba(200,127,74,0.35)', tint: 'rgba(200,127,74,0.10)' }; // copper
-    case 2: return { border: '#CD7F32', glow: 'rgba(205,127,50,0.35)', tint: 'rgba(205,127,50,0.10)' }; // bronze
-    case 3: return { border: '#C0C0C0', glow: 'rgba(192,192,192,0.35)', tint: 'rgba(192,192,192,0.10)' }; // silver
-    case 4: return { border: '#FFD700', glow: 'rgba(255,215,0,0.40)', tint: 'rgba(255,215,0,0.12)' }; // gold
-    case 5: return { border: '#40E0D0', glow: 'rgba(64,224,208,0.40)', tint: 'rgba(64,224,208,0.12)' }; // platinum/teal
-    default: return level >= 6 ? { border: '#A855F7', glow: 'rgba(168,85,247,0.45)', tint: 'rgba(168,85,247,0.14)' } : null; // diamond/purple
+    case 1: return { border: '#D68A4C', glow: 'rgba(214,138,76,0.55)', tint: 'rgba(214,138,76,0.16)', label: 'I' };
+    case 2: return { border: '#E0A040', glow: 'rgba(224,160,64,0.6)', tint: 'rgba(224,160,64,0.18)', label: 'II' };
+    case 3: return { border: '#E8E8E8', glow: 'rgba(232,232,232,0.65)', tint: 'rgba(232,232,232,0.20)', label: 'III' };
+    case 4: return { border: '#FFD700', glow: 'rgba(255,215,0,0.75)', tint: 'rgba(255,215,0,0.24)', label: 'IV' };
+    case 5: return { border: '#3DE8DC', glow: 'rgba(61,232,220,0.8)', tint: 'rgba(61,232,220,0.26)', label: 'V' };
+    default: return level >= 6 ? { border: '#C061FF', glow: 'rgba(192,97,255,0.9)', tint: 'rgba(192,97,255,0.30)', label: '★' } : null;
   }
 }
 
@@ -140,16 +144,30 @@ export const BusinessGridCard: React.FC<BusinessGridCardProps> = ({ business, in
         // so the whole card visibly changes on every upgrade without
         // becoming "glossy 3D" itself.
         background: levelTier
-          ? `linear-gradient(165deg, ${hexToRgba(levelTier.border, 0.24)} 0%, var(--color-premium-surface) 65%)`
+          ? `linear-gradient(165deg, ${hexToRgba(levelTier.border, 0.30)} 0%, var(--color-premium-surface) 60%)`
           : 'var(--color-premium-surface)',
-        border: levelTier ? `1px solid ${hexToRgba(levelTier.border, 0.55)}` : '1px solid var(--color-premium-border)',
+        border: levelTier ? `2.5px solid ${levelTier.border}` : '1px solid var(--color-premium-border)',
         boxShadow: celebrating
           ? '0 0 0 2px var(--color-premium-gold-400), 0 0 16px rgba(212, 167, 44, 0.45)'
-          : levelTier
-          ? `0 0 12px ${levelTier.glow}`
-          : '0 1px 3px rgba(0,0,0,0.28)',
+          : undefined,
       }}
     >
+      {/* Continuous pulsing glow — deliberately separate from the static
+          border/background above, and NOT gated to the celebration
+          moment: an earlier version only glowed briefly during the
+          upgrade wipe, then went fully static and unnoticeable for the
+          rest of the card's life. This animates for as long as the card
+          is on screen, at any tier, so a high-level business visibly
+          reads as "special" even when just glancing at the grid, not
+          only in the instant right after upgrading it. */}
+      {levelTier && !celebrating && (
+        <motion.div
+          className="absolute -inset-1 rounded-[22px] pointer-events-none"
+          style={{ boxShadow: `0 0 22px 4px ${levelTier.glow}`, zIndex: 0 }}
+          animate={{ opacity: [0.5, 1, 0.5] }}
+          transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+        />
+      )}
       {/* Level-up wipe reveal — a brief, automatic color sweep across the
           card the instant a level changes, rather than the new tint just
           silently appearing. `key={business.level}` is what makes this
@@ -232,6 +250,19 @@ export const BusinessGridCard: React.FC<BusinessGridCardProps> = ({ business, in
         animate={{ scale: celebrating ? [1, 1.18, 0.96, 1] : 1 }}
         transition={{ duration: 0.5, ease: 'easeOut', times: [0, 0.4, 0.7, 1] }}
       >
+        {levelTier && (
+          <div
+            className="absolute top-1.5 right-1.5 z-10 w-7 h-7 rounded-full flex items-center justify-center font-black text-[11px]"
+            style={{
+              background: `linear-gradient(180deg, ${lightenHex(levelTier.border, 0.3)} 0%, ${levelTier.border} 100%)`,
+              color: '#1a130e',
+              boxShadow: `0 2px 6px rgba(0,0,0,0.5), 0 0 10px ${levelTier.glow}, inset 0 1px 0 rgba(255,255,255,0.6)`,
+              border: '1.5px solid rgba(255,255,255,0.7)',
+            }}
+          >
+            {levelTier.label}
+          </div>
+        )}
         <BusinessPhoto
           business={business}
           imageUrl={imageUrl}

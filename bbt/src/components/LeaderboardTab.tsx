@@ -220,10 +220,10 @@ const LeaderboardTable: React.FC<{
     >
       {/* Column header */}
       <div
-        className="flex items-center gap-3 px-3 py-2.5"
+        className="flex items-center gap-2 px-2.5 py-2.5"
         style={{ backgroundColor: 'var(--color-premium-elevated)', borderBottom: '1px solid var(--color-premium-border)' }}
       >
-        <span className="w-7 text-center text-[9px] font-bold tracking-wide flex-shrink-0" style={{ color: 'var(--color-premium-text-secondary)' }}>RK</span>
+        <span className="w-7 text-center text-[9px] font-bold tracking-wide flex-shrink-0" style={{ color: 'var(--color-premium-text-secondary)' }}>RANK</span>
         <span className="flex-1 text-[9px] font-bold tracking-wide" style={{ color: 'var(--color-premium-text-secondary)' }}>PLAYER</span>
         {valueType === 'cash' && (
           <span className="w-16 text-center text-[9px] font-bold tracking-wide flex-shrink-0" style={{ color: 'var(--color-premium-text-secondary)' }}>BUSINESSES</span>
@@ -236,27 +236,43 @@ const LeaderboardTable: React.FC<{
       {rows.map(({ entry, rank }, i) => {
         const isMe = entry.uid === myUid;
         const isLast = i === rows.length - 1;
+        // Rank-specific identity — gold/silver/bronze each get their own
+        // tinted row background and a matching glow ring around the
+        // avatar, not just a bare medal emoji floating on an otherwise
+        // identical row. This is what actually makes the top of the
+        // board read as special at a glance, rather than every row
+        // looking the same with only a small icon differing.
+        const rankAccent = rank === 1 ? '#FFD700' : rank === 2 ? '#D8D8E0' : rank === 3 ? '#E0954C' : null;
         return (
           <div
             key={entry.uid + '-' + rank}
-            className="flex items-center gap-3 px-3 py-3"
+            className="flex items-center gap-2 px-2.5 py-3"
             style={{
-              backgroundColor: isMe ? 'rgba(212,167,44,0.07)' : undefined,
+              background: isMe
+                ? 'rgba(212,167,44,0.10)'
+                : rankAccent
+                ? `linear-gradient(90deg, ${rankAccent}1F 0%, transparent 75%)`
+                : undefined,
               borderBottom: isLast ? 'none' : '1px solid var(--color-premium-border)',
-              borderLeft: isMe ? '3px solid var(--color-premium-gold-400)' : '3px solid transparent',
+              borderLeft: isMe ? '3px solid var(--color-premium-gold-400)' : rankAccent ? `3px solid ${rankAccent}` : '3px solid transparent',
             }}
           >
-            {/* Rank — a medal for the actual top 3 positions, plain "#N"
-                text otherwise. Uses the real rank number, not the row's
-                position in this particular list, so this stays correct
-                even for the appended below-the-fold "my rank" row. */}
-            <span className="w-7 text-center text-[15px] flex-shrink-0" style={{ color: 'var(--color-premium-text-secondary)' }}>
-              {rank <= 3 ? MEDALS[rank - 1] : <span className="text-[11px] font-bold">#{rank}</span>}
+            {/* Rank — a large medal for the actual top 3 positions, bold
+                "#N" text otherwise. Uses the real rank number, not the
+                row's position in this particular list, so this stays
+                correct even for the appended below-the-fold "my rank"
+                row. */}
+            <span className="w-7 text-center flex-shrink-0" style={{ fontSize: rank <= 3 ? '19px' : '11px', color: 'var(--color-premium-text-secondary)' }}>
+              {rank <= 3 ? MEDALS[rank - 1] : <span className="font-bold">#{rank}</span>}
             </span>
 
             <div
-              className="w-8 h-8 rounded-full flex items-center justify-center text-base flex-shrink-0"
-              style={{ backgroundColor: 'var(--color-premium-elevated)', border: '1.5px solid var(--color-premium-border)' }}
+              className="w-9 h-9 rounded-full flex items-center justify-center text-base flex-shrink-0"
+              style={{
+                backgroundColor: 'var(--color-premium-elevated)',
+                border: `2px solid ${rankAccent ?? 'var(--color-premium-border)'}`,
+                boxShadow: rankAccent ? `0 0 10px ${rankAccent}88` : undefined,
+              }}
             >
               {entry.avatarEmoji}
             </div>
