@@ -122,8 +122,8 @@ export const BusinessGridCard: React.FC<BusinessGridCardProps> = ({ business, in
     return () => clearTimeout(t);
   }, [justUpdated]);
 
-  const levelTier = getLevelTierColor(business.level);
   const isMaxLevel = business.maxLevel !== undefined && business.level >= business.maxLevel;
+  const levelTier = isMaxLevel ? null : getLevelTierColor(business.level);
   // The glossy image frame's accent color — the level's own color once
   // owned, otherwise the app's default teal, so an unbought business
   // doesn't show a color that hasn't been earned yet.
@@ -306,21 +306,21 @@ export const BusinessGridCard: React.FC<BusinessGridCardProps> = ({ business, in
              stale number and a button that looked tappable but silently
              did nothing when pressed (the purchase was already blocked
              underneath). Replaced with a single, static, full-width
-             indicator instead — a real fix, not just decoration. Built
-             from the same embossed "recipe" as the Upgrade button below
-             (light top highlight, solid shadow lip for real depth) but
-             in a warm gold finish rather than any tier color, since this
-             is saying something different — "fully mastered," not "this
-             is tier N." Deliberately NOT wired to whileTap the way the
-             real button is: giving press feedback for an action that
-             does nothing would just recreate a milder version of the
-             same confusion this is fixing. */
+             indicator instead — a real fix, not just decoration. Flat
+             gold fill, not embossed — a plain, confident finish rather
+             than the raised button "recipe," and the icon above no
+             longer shows the old tier-6 glow/border/medallion either,
+             since this footer badge alone is now the single, clean
+             signal for "fully mastered" rather than three overlapping
+             ones. Deliberately NOT wired to whileTap: giving press
+             feedback for an action that does nothing would just
+             recreate a milder version of the same confusion this is
+             fixing. */
           <div
             className="w-full py-2 rounded-full font-bold text-[12px] text-center"
             style={{
-              background: 'linear-gradient(180deg, #FFE9A8 0%, #D4A72C 100%)',
-              color: '#4A3400',
-              boxShadow: '0 4px 0 #8A6A16, 0 7px 12px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.6)',
+              backgroundColor: '#D4A72C',
+              color: '#3A2900',
             }}
           >
             👑 PREMIUM

@@ -1,33 +1,31 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { LeaderboardTab } from './src/components/LeaderboardTab';
+import { BusinessGridView } from './src/components/BusinessGridView';
+import { buildBusinessesForDistrict } from './src/data/districtBusinesses';
+import { recomputeDistrictProfits } from './src/utils/strategyEngine';
 import './src/index.css';
 import './src/design-system/premium-theme.css';
 
-const board = [
-  { uid: 'u1', playerName: 'Rajesh K.', avatarEmoji: '👨‍🍳', netWorth: 1820000, profitPerMin: 8450, level: 12, updatedAt: Date.now(), weeklyPoints: 340, currentDistrictId: 'badeban', totalPlayTimeSeconds: 0, adsWatchedCount: 0, businessesBoughtCount: 20, poolClaimsCount: 0, distinctBusinessesOwned: 12 },
-  { uid: 'u2', playerName: 'Priya S.', avatarEmoji: '👩', netWorth: 1560000, profitPerMin: 7120, level: 11, updatedAt: Date.now(), weeklyPoints: 300, currentDistrictId: 'badeban', totalPlayTimeSeconds: 0, adsWatchedCount: 0, businessesBoughtCount: 16, poolClaimsCount: 0, distinctBusinessesOwned: 10 },
-  { uid: 'me', playerName: 'You', avatarEmoji: '👦', netWorth: 1340000, profitPerMin: 6890, level: 9, updatedAt: Date.now(), weeklyPoints: 280, currentDistrictId: 'badeban', totalPlayTimeSeconds: 0, adsWatchedCount: 0, businessesBoughtCount: 15, poolClaimsCount: 0, distinctBusinessesOwned: 9 },
-  { uid: 'u4', playerName: 'Amit P.', avatarEmoji: '👨', netWorth: 980000, profitPerMin: 5340, level: 8, updatedAt: Date.now(), weeklyPoints: 220, currentDistrictId: 'badeban', totalPlayTimeSeconds: 0, adsWatchedCount: 0, businessesBoughtCount: 10, poolClaimsCount: 0, distinctBusinessesOwned: 7 },
-];
+const seeded = buildBusinessesForDistrict('badeban').map((b, i) => {
+  const levels = [6, 6, 4, 2, 1, 0, 0, 0];
+  const level = levels[i] ?? 0;
+  if (level === 0) return b;
+  return { ...b, level, status: 'unlocked' as const };
+});
+const businesses = recomputeDistrictProfits('badeban', seeded);
 
 function Preview() {
   return (
-    <LeaderboardTab
-      leaderboard={board}
-      myUid="me"
-      myRank={3}
-      playerName="You"
-      playerAvatar="👦"
-      playerNetWorth={1340000}
-      playerProfitPerMin={6890}
-      playerDistinctBusinessesOwned={9}
-      playerLevel={9}
-      weeklyContestBoard={board}
-      myWeeklyRank={3}
-      myWeeklyPoints={280}
-      lastLeaderboardFetchAt={Date.now()}
-    />
+    <div style={{ padding: '16px', minHeight: '100vh' }}>
+      <BusinessGridView
+        businesses={businesses}
+        onSelectShop={() => {}}
+        readOnly={false}
+        justUpdatedBusinessId={null}
+        cash={500000}
+        contestPointsCelebrationId={null}
+      />
+    </div>
   );
 }
 
