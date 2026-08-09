@@ -5,6 +5,7 @@ import { RewardCard } from '../types';
 import { formatCash } from '../utils/formatCash';
 import { CoinIcon } from './CoinIcon';
 import { CoinBurst } from './FX';
+import { CountUpNumber } from './CountUpNumber';
 import { CountdownClock } from './CountdownClock';
 import { playClick, playUnlock } from '../utils/audio';
 import { getCooldownRemainingSeconds, CLAIM_COOLDOWN_MS } from '../utils/cooldown';
@@ -204,21 +205,31 @@ export const DailyRewardCards: React.FC<DailyRewardCardsProps> = ({ cards, onScr
               ) : (
                 <motion.div
                   key="revealed"
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.25 }}
+                  initial={{ opacity: 0, scale: 0.5 }}
+                  animate={{ opacity: 1, scale: [0.5, 1.12, 1] }}
+                  transition={{ duration: 0.4, times: [0, 0.7, 1], ease: 'easeOut' }}
                   className="absolute inset-0 flex flex-col items-center justify-center p-2 gap-1.5"
                 >
-                  {justRevealedIndex === index && <CoinBurst count={8} emoji="✨" />}
-                  {card.tier === 'rare' ? (
-                    <span className="text-2xl leading-none">💎</span>
-                  ) : card.tier === 'medium' ? (
-                    <span className="text-2xl leading-none">💰</span>
-                  ) : (
-                    <CoinIcon className="w-6 h-6" premium />
-                  )}
+                  {justRevealedIndex === index && <CoinBurst count={card.tier === 'rare' ? 18 : 10} emoji={card.tier === 'rare' ? '💎' : '✨'} />}
+                  <div className="relative flex items-center justify-center">
+                    {card.tier === 'rare' && justRevealedIndex === index && (
+                      <motion.div
+                        className="absolute rounded-full"
+                        style={{ width: 44, height: 44, background: 'radial-gradient(circle, rgba(96,165,250,0.55), transparent 70%)' }}
+                        animate={{ scale: [0.8, 1.5, 0.8], opacity: [0.9, 0.4, 0.9] }}
+                        transition={{ duration: 1.3, repeat: Infinity, ease: 'easeInOut' }}
+                      />
+                    )}
+                    {card.tier === 'rare' ? (
+                      <span className="relative text-2xl leading-none">💎</span>
+                    ) : card.tier === 'medium' ? (
+                      <span className="relative text-2xl leading-none">💰</span>
+                    ) : (
+                      <CoinIcon className="relative w-6 h-6" premium />
+                    )}
+                  </div>
                   <span className="font-bold text-[13px]" style={{ color: GREEN }}>
-                    {formatCash(card.value)}
+                    {justRevealedIndex === index ? <CountUpNumber value={card.value} format={formatCash} durationMs={600} /> : formatCash(card.value)}
                   </span>
 
                   {card.claimed ? (

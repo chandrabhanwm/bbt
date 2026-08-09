@@ -20,6 +20,7 @@ import { PortfolioScreen } from './components/PortfolioScreen';
 import { SettingsScreen } from './components/SettingsScreen';
 import { Confetti, CoinBurst, CoinFlight } from './components/FX';
 import { MilestoneOverlay } from './components/MilestoneOverlay';
+import { CountUpNumber } from './components/CountUpNumber';
 import { DistrictSummaryCard } from './components/DistrictSummaryCard';
 import { buildBusinessesForDistrict, districtEconomies, getDistrictTotalCost } from './data/districtBusinesses';
 import { bastiCity, getDistrict } from './data/cityMapData';
@@ -1292,18 +1293,31 @@ function AppInner({ currentUid }: { currentUid: string }) {
                   ✕
                 </button>
 
-                {poolClaimUI.state === 'collected' && <CoinBurst count={10} emoji="⭐" />}
+                {poolClaimUI.state === 'collected' && <CoinBurst count={16} emoji="⭐" />}
 
                 {poolClaimUI.state === 'collected' ? (
                   <>
-                    <div
-                      className="w-16 h-16 rounded-full flex items-center justify-center text-3xl mb-3"
-                      style={{ backgroundColor: 'var(--color-premium-elevated)', border: '2px solid var(--color-premium-green-500)' }}
+                    <motion.div
+                      className="relative"
+                      initial={{ scale: 0.3, opacity: 0 }}
+                      animate={{ scale: [0.3, 1.15, 1], opacity: 1 }}
+                      transition={{ duration: 0.4, times: [0, 0.7, 1], ease: 'easeOut' }}
                     >
-                      💰
-                    </div>
+                      <motion.div
+                        className="absolute inset-0 rounded-full"
+                        style={{ background: 'radial-gradient(circle, rgba(74,222,128,0.5), transparent 70%)' }}
+                        animate={{ scale: [0.9, 1.4, 0.9], opacity: [0.8, 0.4, 0.8] }}
+                        transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
+                      />
+                      <div
+                        className="relative w-16 h-16 rounded-full flex items-center justify-center text-3xl mb-3"
+                        style={{ backgroundColor: 'var(--color-premium-elevated)', border: '2px solid var(--color-premium-green-500)', boxShadow: '0 0 24px rgba(74,222,128,0.5)' }}
+                      >
+                        💰
+                      </div>
+                    </motion.div>
                     <div className="text-[14px] font-bold flex items-center justify-center gap-1.5 flex-wrap" style={{ color: 'var(--color-premium-green-500)' }}>
-                      + {formatCash(poolClaimUI.amount)} ✓
+                      + <CountUpNumber value={poolClaimUI.amount} format={(n) => formatCash(n)} /> ✓
                     </div>
                     <div className="font-bold text-[19px] mt-0.5" style={{ color: 'var(--color-premium-green-500)' }}>Collected!</div>
                     {(stats.dailyDoubleClaimDate === todayDateString() ? stats.dailyDoubleClaimCount : 0) >= progressionConfig.doubleClaimCapPerDay ? (
