@@ -134,69 +134,13 @@ export const BusinessGridCard: React.FC<BusinessGridCardProps> = ({ business, in
       animate={{ scale: celebrating ? [1, 1.03, 1] : 1 }}
       transition={{ duration: 0.18, ease: 'easeOut' }}
       onClick={() => { playTap(); onSelect(business.id); }}
-      className="relative flex flex-col rounded-[20px] text-left cursor-pointer p-3 overflow-hidden"
+      className="glossy-3d relative flex flex-col rounded-[20px] text-left cursor-pointer p-3 overflow-hidden"
       style={{
-        // Flat card, but tinted per level — a gradient that fades the
-        // level's own color in from the top-left corner into the normal
-        // dark surface, plus a level-colored border. Deliberately not the
-        // glossy embossed treatment (that stays scoped to the image/
-        // buttons only, per design direction) — just a plain color wash,
-        // so the whole card visibly changes on every upgrade without
-        // becoming "glossy 3D" itself.
-        background: levelTier
-          ? `linear-gradient(165deg, ${hexToRgba(levelTier.border, 0.30)} 0%, var(--color-premium-surface) 60%)`
-          : 'var(--color-premium-surface)',
-        border: levelTier ? `2.5px solid ${levelTier.border}` : '1px solid var(--color-premium-border)',
         boxShadow: celebrating
           ? '0 0 0 2px var(--color-premium-gold-400), 0 0 16px rgba(212, 167, 44, 0.45)'
           : undefined,
       }}
     >
-      {/* Continuous pulsing glow — deliberately separate from the static
-          border/background above, and NOT gated to the celebration
-          moment: an earlier version only glowed briefly during the
-          upgrade wipe, then went fully static and unnoticeable for the
-          rest of the card's life. This animates for as long as the card
-          is on screen, at any tier, so a high-level business visibly
-          reads as "special" even when just glancing at the grid, not
-          only in the instant right after upgrading it. */}
-      {levelTier && !celebrating && (
-        <motion.div
-          className="absolute -inset-1 rounded-[22px] pointer-events-none"
-          style={{ boxShadow: `0 0 22px 4px ${levelTier.glow}`, zIndex: 0 }}
-          animate={{ opacity: [0.5, 1, 0.5] }}
-          transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
-        />
-      )}
-      {/* Level-up wipe reveal — a brief, automatic color sweep across the
-          card the instant a level changes, rather than the new tint just
-          silently appearing. `key={business.level}` is what makes this
-          replay every single time the level changes, not just on first
-          mount — Framer Motion treats a changed key as a brand-new
-          element and restarts the animation from `initial`. Sits above
-          the card's own background (z-index 1) but below all real
-          content, which stacks on top naturally since it comes later in
-          the DOM at the same implicit level. */}
-      {levelTier && (
-        <motion.div
-          key={business.level}
-          className="absolute inset-0 rounded-[20px] pointer-events-none overflow-hidden"
-          style={{ zIndex: 1 }}
-          initial={{ clipPath: 'inset(0 100% 0 0)' }}
-          animate={{ clipPath: 'inset(0 0% 0 0)' }}
-          transition={{ duration: 0.65, ease: 'easeOut' }}
-        >
-          <div className="absolute inset-0" style={{ backgroundColor: levelTier.tint }} />
-          <motion.div
-            className="absolute inset-y-0 w-10 pointer-events-none"
-            style={{ background: `linear-gradient(90deg, transparent, ${levelTier.border}55, transparent)` }}
-            initial={{ left: '-10%' }}
-            animate={{ left: '110%' }}
-            transition={{ duration: 0.65, ease: 'easeOut' }}
-          />
-        </motion.div>
-      )}
-
       {celebrating && (
         <>
           <CoinBurst count={7} />
@@ -275,6 +219,28 @@ export const BusinessGridCard: React.FC<BusinessGridCardProps> = ({ business, in
             </div>
           }
         />
+
+        {/* The actual "AAA" treatment — concentrated entirely on the icon
+            artwork itself, not spread across the whole card. A radial
+            aura pulses softly behind/around the icon, transparent at its
+            own center so the artwork stays fully visible, screen-blended
+            so it adds light on top of whatever photo or fallback is
+            underneath rather than being hidden beneath it (a plain
+            z-index layer would just get covered by the opaque photo).
+            This is how collection/gacha UIs actually signal "this one is
+            special" — a focused glow on the thing itself, not a loud
+            frame around the whole container. */}
+        {levelTier && (
+          <motion.div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background: `radial-gradient(circle at 50% 50%, ${levelTier.glow} 0%, transparent 55%)`,
+              mixBlendMode: 'screen',
+            }}
+            animate={{ opacity: [0.5, 1, 0.5] }}
+            transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+          />
+        )}
       </motion.div>
 
       {/* Title, category subtitle, description — plain readable text on
