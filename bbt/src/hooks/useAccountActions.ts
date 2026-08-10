@@ -60,6 +60,9 @@ export function useAccountActions({
         cash: 25000,
         profitPerMin: 0,
         highestBadgeCelebrated: 0,
+        currentStreak: 0,
+        longestStreak: 0,
+        lastStreakLoginDate: '',
         // rank removed — replaced by a real, separately-fetched leaderboard rank
         level: 1,
         xp: 0,

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 
 interface Particle {
   x: number; y: number; vx: number; vy: number;
@@ -23,48 +24,64 @@ function drawStar(ctx: CanvasRenderingContext2D, size: number) {
 /**
  * Real canvas particle burst — gravity, per-particle rotation,
  * deceleration, three distinct shapes — the same technique used in the
- * big full-screen MilestoneOverlay, extracted here so smaller, in-place
- * moments (a scratch card reveal, a routine business upgrade) can use
- * genuinely richer particles too, not just the full-screen takeovers.
- * Deliberately size-flexible: pass the dimensions of whatever container
- * it's sitting inside — a 100px card or a 400px screen both work, since
- * particle count and physics scale with the box rather than assuming a
- * full viewport.
+ * big full-screen MilestoneOverlay.
+ *
+ * Renders via a portal into document.body, NOT as a child of whatever
+ * called it. This is a real fix, not a style choice: a card small
+ * enough to hold a scratch-card reveal or an upgrade badge almost
+ * always has `overflow-hidden` on it (needed to keep its own rounded
+ * corners and inner image clipped correctly), which was silently
+ * clipping every particle the instant it moved past the card's own
+ * tiny bounds — the effect was technically running, just invisible in
+ * practice. Portaling to the body and sizing the stage several times
+ * larger than the anchoring element itself is what actually lets
+ * particles travel far enough to read as a real burst rather than a
+ * few pixels flickering inside a clipped box.
  */
 export const ParticleBurst: React.FC<{
-  width: number;
-  height: number;
+  /** The element to center the burst on — its real screen position via
+   *  getBoundingClientRect() becomes the stage's anchor point. */
+  anchorRef: React.RefObject<HTMLElement>;
   accentHex: string;
-  /** Roughly how many particles to spawn — smaller containers (a card)
-   *  should use fewer than a full-screen celebration would, so the
-   *  burst doesn't look like it's overflowing a small space. */
   count?: number;
-  /** 0-1, where along the container's height the burst originates —
-   *  0.32 (upper third) suits a big screen with text below; 0.5
-   *  (dead center) suits a small, self-contained card. */
-  originY?: number;
-}> = ({ width, height, accentHex, count = 90, originY = 0.32 }) => {
+  /** How many times larger than the anchor element the burst stage
+   *  should be — this is what actually gives particles room to travel
+   *  once they're no longer confined by the card's own clipping. */
+  stageMultiplier?: number;
+}> = ({ anchorRef, accentHex, count = 40, stageMultiplier = 3.2 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const colors = [accentHex, '#FFD700', '#40E0D0', '#FF6B6B', '#4ADE80', '#60A5FA'];
 
   useEffect(() => {
+    const anchor = anchorRef.current;
     const canvas = canvasRef.current;
-    if (!canvas || width <= 0 || height <= 0) return;
+    if (!anchor || !canvas) return;
+    const rect = anchor.getBoundingClientRect();
+    const stageW = rect.width * stageMultiplier;
+    const stageH = rect.height * stageMultiplier;
+    const left = rect.left + rect.width / 2 - stageW / 2;
+    const top = rect.top + rect.height / 2 - stageH / 2;
+
+    canvas.style.left = `${left}px`;
+    canvas.style.top = `${top}px`;
+    canvas.style.width = `${stageW}px`;
+    canvas.style.height = `${stageH}px`;
+
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     const dpr = window.devicePixelRatio || 1;
-    canvas.width = width * dpr;
-    canvas.height = height * dpr;
+    canvas.width = stageW * dpr;
+    canvas.height = stageH * dpr;
     ctx.scale(dpr, dpr);
 
-    // Particle size and speed scale down for small containers — a
-    // burst sized for a full screen would look absurdly oversized
-    // inside a 100px card.
-    const scale = Math.min(1, Math.max(0.35, Math.min(width, height) / 300));
+    // Scale physics off the anchor's own real size, not the inflated
+    // stage — a burst originating from a 110px card should still feel
+    // proportioned to that card, just with room to actually travel.
+    const scale = Math.min(1.4, Math.max(0.5, Math.min(rect.width, rect.height) / 140));
 
     const particles: Particle[] = [];
-    const centerX = width / 2;
-    const centerY = height * originY;
+    const centerX = stageW / 2;
+    const centerY = stageH / 2;
     for (let i = 0; i < count; i++) {
       const angle = Math.random() * Math.PI * 2;
       const speed = (3 + Math.random() * 8) * scale;
@@ -72,17 +89,17 @@ export const ParticleBurst: React.FC<{
         x: centerX, y: centerY,
         vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - 3 * scale,
         rotation: Math.random() * 360, vRotation: (Math.random() - 0.5) * 20,
-        size: (4 + Math.random() * 6) * scale,
+        size: (5 + Math.random() * 7) * scale,
         color: colors[i % colors.length],
         shape: (['square', 'circle', 'star'] as const)[i % 3],
-        life: 0, maxLife: 60 + Math.random() * 40,
+        life: 0, maxLife: 55 + Math.random() * 35,
       });
     }
 
     let raf: number;
     const gravity = 0.35 * scale;
     function tick() {
-      ctx!.clearRect(0, 0, width, height);
+      ctx!.clearRect(0, 0, stageW, stageH);
       particles.forEach((p) => {
         if (p.life >= p.maxLife) return;
         p.vy += gravity;
@@ -111,7 +128,12 @@ export const ParticleBurst: React.FC<{
     }
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [width, height, accentHex, count, originY]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  return <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, width, height, pointerEvents: 'none', zIndex: 5 }} />;
+  return createPortal(
+    <canvas ref={canvasRef} style={{ position: 'fixed', pointerEvents: 'none', zIndex: 300 }} />,
+    document.body
+  );
 };
+

@@ -188,6 +188,18 @@ export interface PlayerStats {
    *  the same badge celebration from firing again on every subsequent
    *  purchase once a threshold has already been crossed and shown. */
   highestBadgeCelebrated: number;
+  /** Daily login streak — currentStreak increments once per real
+   *  calendar day the player opens the app on a genuinely consecutive
+   *  day (yesterday -> today), resets to 1 if a day was missed.
+   *  lastStreakLoginDate is the YYYY-MM-DD (todayDateString() format,
+   *  same convention used for every other daily-reset field in this
+   *  app) the streak was last advanced on — this is what the
+   *  day-boundary check compares against, not a raw timestamp, so it's
+   *  immune to time-of-day drift the same way the existing daily
+   *  reward cards and pool double-claim logic already are. */
+  currentStreak: number;
+  longestStreak: number;
+  lastStreakLoginDate: string;
 
   /** Whether this player has made at least one pool claim since the
    *  2-hour cooldown was introduced. Defaults to false for every save,

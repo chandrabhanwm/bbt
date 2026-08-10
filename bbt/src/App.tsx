@@ -10,6 +10,8 @@ import { Business, PlayerStats, RewardCard } from './types';
 import { Header } from './components/Header';
 import { DailyRewardCards } from './components/DailyRewardCards';
 import { ShareEarnCard } from './components/ShareEarnCard';
+import { RivalCalloutCard } from './components/RivalCalloutCard';
+import { DailyStreakCard } from './components/DailyStreakCard';
 import { BusinessGridView } from './components/BusinessGridView';
 import { FooterTipBar } from './components/FooterTipBar';
 import { ShopDetailSheet } from './components/ShopDetailSheet';
@@ -43,6 +45,7 @@ import { useAccountActions } from './hooks/useAccountActions';
 import { useSessionEnforcement } from './hooks/useSessionEnforcement';
 import { getCooldownRemainingSeconds, CLAIM_COOLDOWN_MS, formatCooldownClock } from './utils/cooldown';
 import { applyContestPoints, todayDateString, localDateStringOf } from './utils/weeklyContest';
+import { processStreakLogin, STREAK_MILESTONE_DAYS } from './utils/dailyStreak';
 import { CountdownClock } from './components/CountdownClock';
 import { progressionConfig, CURRENT_SAVE_VERSION } from './config/progressionConfig';
 import { playClick, playLevelUp, playUnlock } from './utils/audio';
@@ -206,12 +209,30 @@ function AppInner({ currentUid }: { currentUid: string }) {
   // cloud restore below: if this is false, restore never runs, so
   // there's zero risk of a cloud save overwriting real local progress.
   const hadNoLocalSaveAtBootRef = useRef(!shouldTrustLocalSave);
+  // Captures the outcome of this session's streak check, computed
+  // synchronously below alongside every other daily-reset field (reward
+  // cards, pool cap) — not via a separate effect that could race with
+  // async cloud sync for a returning player. A dedicated ref rather
+  // than calling setMilestone directly during another state's lazy
+  // initializer, which isn't safe; a later effect reads this once to
+  // decide whether to show the streak celebration.
+  const streakResultRef = useRef<{ advanced: boolean; rewardAmount: number; newStreak: number; wasBroken: boolean } | null>(null);
 
   const [stats, setStats] = useState<PlayerStats>(() => {
+    // A genuinely brand-new player starts their streak immediately at
+    // Day 1, same as a returning player's own first-ever processed
+    // login — "you're here today" is Day 1, not something that only
+    // starts counting on their second visit.
+    const freshStreak = processStreakLogin(0, 0, '');
+    streakResultRef.current = freshStreak;
+
     const freshDefaults: PlayerStats = {
-      cash: 25000, // "Moment Zero" — enough for a couple of small early purchases, not a pre-filled empire. Scaled down alongside the rest of the economy's 1.9x reduction — ₹50,000 against the new, cheaper costs was quietly buying 3 businesses immediately instead of the originally-intended "about one."
+      cash: 25000 + freshStreak.rewardAmount, // "Moment Zero" — enough for a couple of small early purchases, not a pre-filled empire. Scaled down alongside the rest of the economy's 1.9x reduction — ₹50,000 against the new, cheaper costs was quietly buying 3 businesses immediately instead of the originally-intended "about one."
       profitPerMin: 0, // Nothing owned yet — Tea Stall is no longer pre-owned, per Moment Zero
       highestBadgeCelebrated: 0,
+      currentStreak: freshStreak.newStreak,
+      longestStreak: freshStreak.newLongestStreak,
+      lastStreakLoginDate: todayDateString(),
       // rank removed — replaced by a real, separately-fetched leaderboard rank
       level: 1,
       xp: 0,
@@ -285,13 +306,24 @@ function AppInner({ currentUid }: { currentUid: string }) {
           ? generateDailyGoal(currentDistrictId, businessesByDistrict)
           : parsed.dailyGoal;
 
+        // Daily login streak — same synchronous-at-load pattern as
+        // everything else in this block, so a returning player's real
+        // streak is correct from the very first render, not dependent
+        // on async cloud sync settling first.
+        const streakResult = processStreakLogin(parsed.currentStreak ?? 0, parsed.longestStreak ?? 0, parsed.lastStreakLoginDate ?? '');
+        streakResultRef.current = streakResult;
+
         return {
           ...parsed,
+          cash: (parsed.cash ?? 0) + (streakResult.advanced ? streakResult.rewardAmount : 0),
           poolCash: Math.min(getDistrictTotalCost(currentDistrictId) * progressionConfig.poolCeilingRatio, Math.round((parsed.profitPerMin ?? 0) * cappedMinutes)),
           lastPoolClaimAt: lastClaimAt,
           rewardCards,
           lastCardsResetAt: cardsExpired || !parsed.rewardCards ? Date.now() : lastCardsReset,
           dailyGoal,
+          currentStreak: streakResult.newStreak,
+          longestStreak: streakResult.newLongestStreak,
+          lastStreakLoginDate: streakResult.advanced ? todayDateString() : (parsed.lastStreakLoginDate ?? ''),
           // Existing saves predate Moment Zero and, by definition, already
           // have real progress — default both to true so a returning
           // player never sees the first-purchase/first-upgrade celebration
@@ -796,6 +828,32 @@ function AppInner({ currentUid }: { currentUid: string }) {
     }
   }, [businessesByDistrict]);
 
+  // Daily streak celebration — reads the result captured synchronously
+  // during initial state setup (see streakResultRef above). Runs once,
+  // on mount, since the streak check itself only ever happens once per
+  // real calendar day regardless of how many times this effect's own
+  // dependency array might otherwise re-fire.
+  useEffect(() => {
+    const result = streakResultRef.current;
+    if (!result || !result.advanced) return;
+    const isMilestoneDay = STREAK_MILESTONE_DAYS.includes(result.newStreak);
+    if (isMilestoneDay) {
+      playLevelUp();
+      setMilestone({
+        icon: '🔥',
+        title: `🔥 ${result.newStreak} Day Streak!`,
+        message: result.wasBroken
+          ? `Starting fresh, but this one's a real milestone already.`
+          : `You've shown up ${result.newStreak} days in a row.`,
+        bonusText: `+₹${result.rewardAmount.toLocaleString('en-IN')} streak bonus`,
+        color: 'gold',
+      });
+    } else {
+      pushNewsEvent(`🔥 Day ${result.newStreak} streak — +₹${result.rewardAmount.toLocaleString('en-IN')}`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Achievement detection removed — replaced by the prestige badge
   // system (data/prestigeBadges.ts), which now owns both the
   // celebration and the display in Portfolio. Running both would mean
@@ -1094,6 +1152,12 @@ function AppInner({ currentUid }: { currentUid: string }) {
                         onScratch={handleScratchCard}
                         onClaim={handleClaimCard}
                         lastCardClaimAt={stats.lastCardClaimAt}
+                      />
+                      <DailyStreakCard currentStreak={stats.currentStreak} />
+                      <RivalCalloutCard
+                        leaderboard={realLeaderboard}
+                        myRank={myRealRank}
+                        myProfitPerMin={stats.profitPerMin}
                       />
                       <ShareEarnCard
                         referrerUid={currentUid}

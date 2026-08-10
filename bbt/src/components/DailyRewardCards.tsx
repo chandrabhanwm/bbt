@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, PanInfo } from 'motion/react';
 import { Clock, Gift } from 'lucide-react';
 import { RewardCard } from '../types';
@@ -55,6 +55,7 @@ export const DailyRewardCards: React.FC<DailyRewardCardsProps> = ({ cards, onScr
   const [adCountdown, setAdCountdown] = useState(6);
   const [adBrand, setAdBrand] = useState('CoralBay Cola Co.');
   const [justRevealedIndex, setJustRevealedIndex] = useState<number | null>(null);
+  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [lockedTapMessage, setLockedTapMessage] = useState<number | null>(null);
 
   // A plain re-render tick, once a second — this is what makes the
@@ -154,7 +155,7 @@ export const DailyRewardCards: React.FC<DailyRewardCardsProps> = ({ cards, onScr
           const isLocked = isLockedByOtherActive || isLockedByCooldown;
 
           return (
-          <div key={index} className="glossy-3d rounded-2xl overflow-hidden relative" style={{ minHeight: '108px' }}>
+          <div ref={(el) => { cardRefs.current[index] = el; }} key={index} className="glossy-3d rounded-2xl overflow-hidden relative" style={{ minHeight: '108px' }}>
             <AnimatePresence mode="wait">
               {!card.scratched ? (
                 <motion.div
@@ -211,7 +212,7 @@ export const DailyRewardCards: React.FC<DailyRewardCardsProps> = ({ cards, onScr
                   className="absolute inset-0 flex flex-col items-center justify-center p-2 gap-1.5"
                 >
                   {justRevealedIndex === index && (
-                    <ParticleBurst width={110} height={108} accentHex={card.tier === 'rare' ? '#60A5FA' : '#FFD700'} count={card.tier === 'rare' ? 36 : 22} originY={0.5} />
+                    <ParticleBurst anchorRef={{ current: cardRefs.current[index] }} accentHex={card.tier === 'rare' ? '#60A5FA' : '#FFD700'} count={card.tier === 'rare' ? 55 : 34} stageMultiplier={3} />
                   )}
                   <div className="relative flex items-center justify-center">
                     {card.tier === 'rare' && justRevealedIndex === index && (

@@ -41,14 +41,10 @@ const LightRays: React.FC<{ color: string }> = ({ color }) => (
 export const MilestoneOverlay: React.FC<{ data: MilestoneData }> = ({ data }) => {
   const accentHex = COLOR_HEX[data.color];
   const containerRef = useRef<HTMLDivElement>(null);
-  const [size, setSize] = useState({ width: 390, height: 700 });
+  const iconRef = useRef<HTMLDivElement>(null);
   const [shakeKey, setShakeKey] = useState(0);
 
   useEffect(() => {
-    if (containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect();
-      setSize({ width: rect.width, height: rect.height });
-    }
     const t = setTimeout(() => setShakeKey(1), 350); // fires right as the icon lands
     return () => clearTimeout(t);
   }, []);
@@ -63,7 +59,7 @@ export const MilestoneOverlay: React.FC<{ data: MilestoneData }> = ({ data }) =>
       transition={{ duration: shakeKey ? 0.35 : 0.25, ease: 'easeOut' }}
     >
       <div style={{ position: 'absolute', inset: 0, background: `radial-gradient(circle at 50% 40%, rgba(20,30,45,0.8), rgba(5,10,18,0.95))` }} />
-      <ParticleBurst width={size.width} height={size.height} accentHex={accentHex} count={90} originY={0.32} />
+      <ParticleBurst anchorRef={iconRef} accentHex={accentHex} count={100} stageMultiplier={3.2} />
       <LightRays color={accentHex} />
 
       <motion.div
@@ -72,6 +68,7 @@ export const MilestoneOverlay: React.FC<{ data: MilestoneData }> = ({ data }) =>
         animate={{ opacity: 1 }}
       >
         <motion.div
+          ref={iconRef}
           className="glossy-3d"
           style={{
             width: 120, height: 120, borderRadius: 28, margin: '0 auto', position: 'relative',

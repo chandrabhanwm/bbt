@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
 import { Lock } from 'lucide-react';
 import { Business } from '../types';
@@ -128,9 +128,11 @@ export const BusinessGridCard: React.FC<BusinessGridCardProps> = ({ business, in
   // owned, otherwise the app's default teal, so an unbought business
   // doesn't show a color that hasn't been earned yet.
   const imageAccent = levelTier?.border ?? '#2DBEC8';
+  const cardRef = useRef<HTMLButtonElement>(null);
 
   return (
     <motion.button
+      ref={cardRef}
       whileTap={{ scale: 0.97 }}
       animate={{ scale: celebrating ? [1, 1.03, 1] : 1 }}
       transition={{ duration: 0.18, ease: 'easeOut' }}
@@ -144,7 +146,7 @@ export const BusinessGridCard: React.FC<BusinessGridCardProps> = ({ business, in
     >
       {celebrating && (
         <>
-          <ParticleBurst width={175} height={300} accentHex="#D4A72C" count={26} originY={0.22} />
+          <ParticleBurst anchorRef={cardRef} accentHex="#D4A72C" count={45} stageMultiplier={2.6} />
           <motion.div
             className="absolute -top-2 left-1/2 z-20 px-2.5 py-1 rounded-full font-bold text-[10px] whitespace-nowrap pointer-events-none flex items-center gap-1"
             style={{

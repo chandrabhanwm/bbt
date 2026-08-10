@@ -1,24 +1,22 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { DailyRewardCards } from './src/components/DailyRewardCards';
+import { DailyStreakCard } from './src/components/DailyStreakCard';
+import { RivalCalloutCard } from './src/components/RivalCalloutCard';
 import './src/index.css';
 import './src/design-system/premium-theme.css';
 
+const board = [
+  { uid: 'u1', playerName: 'Rajesh K.', avatarEmoji: '👨‍🍳', netWorth: 1820000, profitPerMin: 8450, level: 12, updatedAt: Date.now(), weeklyPoints: 340, currentDistrictId: 'badeban', totalPlayTimeSeconds: 0, adsWatchedCount: 0, businessesBoughtCount: 20, poolClaimsCount: 0, distinctBusinessesOwned: 12, totalLevelSum: 95 },
+  { uid: 'u2', playerName: 'Priya S.', avatarEmoji: '👩', netWorth: 1560000, profitPerMin: 7120, level: 11, updatedAt: Date.now(), weeklyPoints: 300, currentDistrictId: 'badeban', totalPlayTimeSeconds: 0, adsWatchedCount: 0, businessesBoughtCount: 16, poolClaimsCount: 0, distinctBusinessesOwned: 10, totalLevelSum: 40 },
+  { uid: 'me', playerName: 'You', avatarEmoji: '👦', netWorth: 1340000, profitPerMin: 6890, level: 9, updatedAt: Date.now(), weeklyPoints: 280, currentDistrictId: 'badeban', totalPlayTimeSeconds: 0, adsWatchedCount: 0, businessesBoughtCount: 15, poolClaimsCount: 0, distinctBusinessesOwned: 9, totalLevelSum: 22 },
+];
+
 function Preview() {
-  const [cards, setCards] = useState([
-    { scratched: false, value: 5000, claimed: false, tier: 'rare' as const },
-    { scratched: false, value: 500, claimed: false, tier: 'small' as const },
-    { scratched: false, value: 1500, claimed: false, tier: 'medium' as const },
-  ]);
   return (
-    <div style={{ padding: '16px', minHeight: '100vh', background: '#0A1A24' }}>
-      <DailyRewardCards
-        cards={cards}
-        onScratch={(i) => setCards((prev) => prev.map((c, idx) => idx === i ? { ...c, scratched: true } : c))}
-        onClaim={() => {}}
-        lastCardClaimAt={0}
-      />
-    </div>
+    <>
+      <DailyStreakCard currentStreak={12} />
+      <RivalCalloutCard leaderboard={board} myRank={3} myProfitPerMin={6890} />
+    </>
   );
 }
 
