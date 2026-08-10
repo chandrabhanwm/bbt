@@ -1158,6 +1158,7 @@ function AppInner({ currentUid }: { currentUid: string }) {
                         leaderboard={realLeaderboard}
                         myRank={myRealRank}
                         myProfitPerMin={stats.profitPerMin}
+                        myAvatar={avatarEmoji}
                       />
                       <ShareEarnCard
                         referrerUid={currentUid}

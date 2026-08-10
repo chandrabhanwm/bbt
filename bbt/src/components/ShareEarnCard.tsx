@@ -68,46 +68,41 @@ export const ShareEarnCard: React.FC<ShareEarnCardProps> = ({ referrerUid, bonus
   };
 
   return (
-    <div
-      className="rounded-xl px-3 py-2.5 flex items-center gap-2.5"
+    <motion.div
+      initial={{ opacity: 0, y: -6 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="rounded-2xl px-3.5 py-3 flex items-center gap-2.5 relative overflow-hidden"
       style={{
-        // Embossed — a raised, physical-feeling surface rather than a
-        // flat panel sitting on top of the background. The card's own
-        // fill stays close to the surrounding page color (the depth
-        // illusion depends on that closeness, not on strong contrast),
-        // with the actual depth carried entirely by a light-catching
-        // highlight along the top edge and a soft shadow pooling
-        // underneath — the classic light-source-from-above pairing.
-        background: 'linear-gradient(165deg, rgba(255,255,255,0.06) 0%, var(--color-premium-surface) 12%, var(--color-premium-surface) 100%)',
-        boxShadow: `
-          inset 0 1.5px 0 rgba(255,255,255,0.12),
-          inset 0 -1px 0 rgba(0,0,0,0.25),
-          0 6px 14px rgba(0,0,0,0.35),
-          0 1px 2px rgba(0,0,0,0.2)
-        `,
-        border: '1px solid rgba(255,255,255,0.06)',
+        background: 'linear-gradient(135deg, #C2298A 0%, #8B2FC9 55%, #5A2FB8 100%)',
+        boxShadow: '0 8px 20px rgba(150,40,180,0.35), inset 0 1.5px 0 rgba(255,255,255,0.22)',
       }}
     >
-      <div
-        className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
-        style={{
-          backgroundColor: GOLD,
-          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.5), inset 0 -1.5px 0 rgba(0,0,0,0.2), 0 2px 5px rgba(0,0,0,0.3)',
-        }}
-      >
-        <Gift size={13} color="var(--color-premium-text-inverse)" />
-      </div>
+      <motion.div
+        className="absolute -right-6 -bottom-8 w-28 h-28 rounded-full pointer-events-none"
+        style={{ background: 'radial-gradient(circle, rgba(255,180,230,0.4), transparent 70%)' }}
+        animate={{ scale: [1, 1.2, 1], opacity: [0.6, 0.95, 0.6] }}
+        transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+      />
 
-      <div className="flex-1 min-w-0">
-        <div className="text-[11px] font-bold truncate" style={{ color: 'var(--color-premium-text)' }}>
+      <motion.div
+        className="text-[28px] leading-none flex-shrink-0 relative"
+        animate={{ rotate: [-8, 8, -8], y: [0, -2, 0] }}
+        transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut' }}
+        style={{ filter: 'drop-shadow(0 0 8px rgba(255,150,220,0.7))' }}
+      >
+        🎁
+      </motion.div>
+
+      <div className="flex-1 min-w-0 relative">
+        <div className="text-[12px] font-black text-white truncate">
           Share &amp; Earn
         </div>
-        <div className="text-[9px] font-semibold leading-tight" style={{ color: TEXT_SECONDARY }}>
+        <div className="text-[9.5px] font-bold leading-tight text-white/85">
           Both get {bonusCoins.toLocaleString('en-IN')} coins
         </div>
       </div>
 
-      <div className="flex items-center gap-1.5 flex-shrink-0">
+      <div className="flex items-center gap-1.5 flex-shrink-0 relative">
         <motion.button
           whileTap={{ y: 1 }}
           onClick={handleWhatsAppShare}
@@ -126,14 +121,14 @@ export const ShareEarnCard: React.FC<ShareEarnCardProps> = ({ referrerUid, bonus
           onClick={handleGenericShare}
           className="px-2.5 py-1.5 rounded-lg font-bold text-[10px] cursor-pointer flex items-center gap-1 flex-shrink-0"
           style={{
-            backgroundColor: GOLD,
-            color: 'var(--color-premium-text-inverse)',
-            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.4), inset 0 -1.5px 0 rgba(0,0,0,0.25), 0 2px 5px rgba(0,0,0,0.3)',
+            backgroundColor: '#FFD700',
+            color: '#3D1A4A',
+            boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.5), inset 0 -1.5px 0 rgba(0,0,0,0.15), 0 2px 5px rgba(0,0,0,0.3)',
           }}
         >
           {copied ? <><Check size={11} /> Copied</> : <><Share2 size={11} /> Share</>}
         </motion.button>
       </div>
-    </div>
+    </motion.div>
   );
 };

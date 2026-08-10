@@ -2,6 +2,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { DailyStreakCard } from './src/components/DailyStreakCard';
 import { RivalCalloutCard } from './src/components/RivalCalloutCard';
+import { ShareEarnCard } from './src/components/ShareEarnCard';
 import './src/index.css';
 import './src/design-system/premium-theme.css';
 
@@ -14,8 +15,9 @@ const board = [
 function Preview() {
   return (
     <>
-      <DailyStreakCard currentStreak={12} />
-      <RivalCalloutCard leaderboard={board} myRank={3} myProfitPerMin={6890} />
+      <DailyStreakCard currentStreak={4} />
+      <RivalCalloutCard leaderboard={board} myRank={3} myProfitPerMin={6890} myAvatar="👦" />
+      <ShareEarnCard referrerUid="test123" bonusCoins={2000} />
     </>
   );
 }
