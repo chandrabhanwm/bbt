@@ -151,31 +151,43 @@ export const PortfolioScreen: React.FC<PortfolioScreenProps> = ({
   return (
     <div id="portfolio-tab" className="p-4 space-y-4 pb-28 select-none" style={{ backgroundColor: 'var(--color-premium-bg)' }}>
 
-      {/* Hero — same avatar-ring / XP-bar language as the Header */}
+      {/* Hero — same avatar-ring / XP-bar language as the Header, now a
+          genuine gold gradient identity card instead of a flat neutral
+          surface, matching the standard already proven on the Home
+          cards rather than leaving this screen on the old template. */}
       <div
-        className="rounded-2xl p-4 flex items-center gap-4"
-        style={{ backgroundColor: 'var(--color-premium-surface)', border: '1.5px solid var(--color-premium-border-strong)' }}
+        className="rounded-2xl p-4 flex items-center gap-4 relative overflow-hidden"
+        style={{
+          background: 'linear-gradient(135deg, #8A6B1F 0%, #5C4310 60%, #3D2C0A 100%)',
+          boxShadow: '0 8px 20px rgba(150,110,20,0.3), inset 0 1.5px 0 rgba(255,255,255,0.15)',
+        }}
       >
+        <motion.div
+          className="absolute -left-8 -top-8 w-32 h-32 rounded-full pointer-events-none"
+          style={{ background: 'radial-gradient(circle, rgba(255,215,0,0.35), transparent 70%)' }}
+          animate={{ opacity: [0.5, 0.9, 0.5] }}
+          transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+        />
         <div className="relative w-16 h-16 flex-shrink-0">
           <div
             className="w-full h-full rounded-full flex items-center justify-center text-3xl"
-            style={{ backgroundColor: 'var(--color-premium-elevated)', border: '2px solid var(--color-premium-gold-400)' }}
+            style={{ backgroundColor: '#2A1F08', border: '2.5px solid #FFD700', boxShadow: '0 0 14px rgba(255,215,0,0.6)' }}
           >
             {avatarEmoji}
           </div>
         </div>
 
-        <div className="flex-1 min-w-0">
-          <h3 className="font-bold text-[15px] truncate" style={{ color: 'var(--color-premium-text)' }}>
+        <div className="relative flex-1 min-w-0">
+          <h3 className="font-bold text-[15px] truncate text-white">
             {playerName}
           </h3>
-          <div className="text-[10px] font-semibold mt-0.5" style={{ color: 'var(--color-premium-gold-400)' }}>
+          <div className="text-[10px] font-bold mt-0.5" style={{ color: '#FFD700' }}>
             Level {stats.level} · {xpPct}%
           </div>
-          <div className="w-full h-1 rounded-full mt-1.5 overflow-hidden" style={{ backgroundColor: 'var(--color-premium-track)' }}>
+          <div className="w-full h-1.5 rounded-full mt-1.5 overflow-hidden" style={{ backgroundColor: 'rgba(0,0,0,0.35)' }}>
             <motion.div
               className="h-full rounded-full"
-              style={{ backgroundColor: 'var(--color-premium-gold-400)' }}
+              style={{ backgroundColor: '#FFD700' }}
               initial={{ width: 0 }}
               animate={{ width: `${xpPct}%` }}
               transition={{ duration: 0.35, ease: 'easeOut' }}
@@ -183,8 +195,8 @@ export const PortfolioScreen: React.FC<PortfolioScreenProps> = ({
           </div>
           <div className="flex items-center gap-1 mt-1.5 justify-between">
             <div className="flex items-center gap-1 min-w-0">
-              <Fingerprint size={10} color="var(--color-premium-text-secondary)" className="flex-shrink-0" />
-              <span className="text-[9.5px] font-medium truncate" style={{ color: 'var(--color-premium-text-secondary)' }}>
+              <Fingerprint size={10} color="rgba(255,255,255,0.6)" className="flex-shrink-0" />
+              <span className="text-[9.5px] font-medium truncate text-white/70">
                 {playerEmail || `ID ${playerId}`}
               </span>
             </div>
@@ -192,8 +204,8 @@ export const PortfolioScreen: React.FC<PortfolioScreenProps> = ({
               onClick={onSignOut}
               className="flex items-center gap-1 flex-shrink-0 ml-2 cursor-pointer"
             >
-              <LogOut size={10} color="var(--color-premium-red-400)" />
-              <span className="text-[9.5px] font-semibold" style={{ color: 'var(--color-premium-red-400)' }}>
+              <LogOut size={10} color="#FF8A8A" />
+              <span className="text-[9.5px] font-semibold" style={{ color: '#FF8A8A' }}>
                 Sign Out
               </span>
             </button>
@@ -201,28 +213,37 @@ export const PortfolioScreen: React.FC<PortfolioScreenProps> = ({
         </div>
       </div>
 
-      {/* Empire stats — Net Worth first, then Businesses, then Districts */}
+      {/* Empire stats — three genuinely distinct identities (gold for
+          money, teal for businesses, purple for territory) instead of
+          three identical neutral cards differing only in their text,
+          matching the same tier-color logic already used elsewhere. */}
       <div className="grid grid-cols-3 gap-2.5">
-        <BottomStat label="Net Worth" value={formatCash(netWorth)} money />
-        <BottomStat label="Businesses" value={`${totalBusinessesOwned} / ${totalBusinessesPossible}`} />
-        <BottomStat label="Districts" value={`${districtsOwned.length} / ${bastiCity.districts.length}`} />
+        <BottomStat label="Net Worth" value={formatCash(netWorth)} accentHex="#FFD700" money />
+        <BottomStat label="Businesses" value={`${totalBusinessesOwned} / ${totalBusinessesPossible}`} accentHex="#3DE8DC" />
+        <BottomStat label="Districts" value={`${districtsOwned.length} / ${bastiCity.districts.length}`} accentHex="#C061FF" />
       </div>
 
-      {/* Combined Income + Claim Pool */}
+      {/* Combined Income + Claim Pool — a genuine emerald identity for
+          the income/money moment, replacing the neutral glossy-3d
+          shell that looked identical to every other card on the app. */}
       <div
-        className="glossy-3d rounded-2xl p-3"
+        className="rounded-2xl p-3 relative overflow-hidden"
+        style={{
+          background: 'linear-gradient(135deg, #1F6B4A 0%, #14442F 100%)',
+          boxShadow: '0 6px 16px rgba(20,100,70,0.3), inset 0 1.5px 0 rgba(255,255,255,0.12)',
+        }}
       >
-        <span className="text-[9px] font-bold uppercase tracking-widest" style={{ color: TEXT_SECONDARY }}>
+        <span className="text-[9px] font-bold uppercase tracking-widest text-white/70">
           Combined Income
         </span>
         <div className="flex items-center gap-1.5 mt-0.5">
           <CoinIcon className="w-3.5 h-3.5" premium />
-          <span className="font-bold text-[18px]" style={{ color: GREEN }}>
-            {formatCash(stats.profitPerMin)}<span className="text-[11px]" style={{ color: TEXT_SECONDARY }}>/min</span>
+          <span className="font-bold text-[18px]" style={{ color: '#5AE89A' }}>
+            {formatCash(stats.profitPerMin)}<span className="text-[11px] text-white/60">/min</span>
           </span>
         </div>
 
-        <div className="rounded-xl p-2.5 mt-2.5" style={{ backgroundColor: 'var(--color-premium-elevated)' }}>
+        <div className="rounded-xl p-2.5 mt-2.5" style={{ backgroundColor: 'rgba(0,0,0,0.25)' }}>
           <AnimatePresence mode="wait">
             {claimState === 'idle' && (
               <motion.div key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
@@ -382,12 +403,17 @@ export const PortfolioScreen: React.FC<PortfolioScreenProps> = ({
           const isExpanded = expandedDistrict === district.id;
           const businesses = businessesByDistrict[district.id] ?? [];
           const owned = businesses.filter((b) => b.level > 0);
+          const isFullyComplete = progress.completionPercent >= 100;
+          const rowAccent = isFullyComplete ? '#FFD700' : '#3DE8DC';
 
           return (
             <div
               key={district.id}
               className="rounded-2xl overflow-hidden"
-              style={{ backgroundColor: 'var(--color-premium-surface)', border: '1.5px solid var(--color-premium-border)' }}
+              style={{
+                background: `linear-gradient(160deg, ${rowAccent}22 0%, var(--color-premium-surface) 70%)`,
+                border: `1.5px solid ${rowAccent}66`,
+              }}
             >
               <button
                 onClick={() => { playClick(); setExpandedDistrict(isExpanded ? null : district.id); }}
@@ -395,7 +421,7 @@ export const PortfolioScreen: React.FC<PortfolioScreenProps> = ({
               >
                 <div
                   className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-lg"
-                  style={{ backgroundColor: 'var(--color-premium-elevated)', border: '1.5px solid var(--color-premium-border)' }}
+                  style={{ background: `linear-gradient(180deg, ${rowAccent}55, var(--color-premium-elevated))`, border: `1.5px solid ${rowAccent}` }}
                 >
                   {district.emoji}
                 </div>
@@ -582,16 +608,21 @@ const SectionLabel: React.FC<{ children: React.ReactNode; icon?: React.ReactNode
   </div>
 );
 
-const BottomStat: React.FC<{ label: string; value: string; money?: boolean }> = ({ label, value, money }) => (
+const BottomStat: React.FC<{ label: string; value: string; accentHex: string; money?: boolean }> = ({ label, value, accentHex, money }) => (
   <div
-    className="glossy-3d rounded-2xl p-3 flex flex-col items-center text-center"
+    className="rounded-2xl p-3 flex flex-col items-center text-center relative overflow-hidden"
+    style={{
+      background: `linear-gradient(160deg, ${accentHex}33 0%, var(--color-premium-surface) 75%)`,
+      border: `1.5px solid ${accentHex}88`,
+      boxShadow: `0 3px 10px ${accentHex}22`,
+    }}
   >
     <span className="text-[7.5px] font-bold uppercase tracking-widest" style={{ color: 'var(--color-premium-text-secondary)' }}>
       {label}
     </span>
     <span
       className="font-bold text-[13px] mt-1 flex items-center gap-1"
-      style={{ color: money ? 'var(--color-premium-green-500)' : 'var(--color-premium-text)' }}
+      style={{ color: money ? accentHex : 'var(--color-premium-text)' }}
     >
       {money && <CoinIcon className="w-3 h-3" premium />}
       {value}
