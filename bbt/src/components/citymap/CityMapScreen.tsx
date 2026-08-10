@@ -170,6 +170,31 @@ export const CityMapScreen: React.FC<CityMapScreenProps> = ({ onOpenDistrict, on
         ))}
       </div>
 
+      {/* Small ambient twinkling particles — genuinely distinct from the
+          clouds above (tiny bright points drifting and fading, not
+          soft large blurs), giving the map a second, finer layer of
+          ambient motion the way a real night sky or a distant city has
+          both broad atmosphere and small individual points of light. */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+        {Array.from({ length: 14 }).map((_, i) => {
+          const left = (i * 37 + 11) % 100;
+          const top = (i * 53 + 7) % 100;
+          const duration = 4 + (i % 5);
+          return (
+            <motion.div
+              key={i}
+              style={{
+                position: 'absolute', left: `${left}%`, top: `${top}%`,
+                width: 3, height: 3, borderRadius: '50%',
+                background: 'var(--color-premium-gold-400)',
+              }}
+              animate={{ opacity: [0, 0.8, 0], y: [0, -14, -28] }}
+              transition={{ duration, repeat: Infinity, delay: i * 0.7, ease: 'easeInOut' }}
+            />
+          );
+        })}
+      </div>
+
       <TransformWrapper
         initialScale={1}
         minScale={0.5}

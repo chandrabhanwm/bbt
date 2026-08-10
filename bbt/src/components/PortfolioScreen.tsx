@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Award, Settings as SettingsIcon, ChevronRight, ChevronDown, Fingerprint, Zap, Sparkles, LogOut } from 'lucide-react';
+import { Award, Settings as SettingsIcon, ChevronRight, ChevronDown, Fingerprint, Zap, Sparkles, LogOut, Lock } from 'lucide-react';
 import { progressionConfig } from '../config/progressionConfig';
 import { PlayerStats, Business } from '../types';
 import { bastiCity } from '../data/cityMapData';
@@ -456,55 +456,97 @@ export const PortfolioScreen: React.FC<PortfolioScreenProps> = ({
           keeping locked achievements visible before. */}
       <SectionLabel icon={<Award size={13} color="var(--color-premium-gold-400)" />}>Prestige Badges</SectionLabel>
       <div className="space-y-2.5">
-        {PRESTIGE_BADGES.map((badge) => {
-          const unlocked = totalLevelSum >= badge.threshold;
-          const progress = Math.min(100, Math.round((totalLevelSum / badge.threshold) * 100));
-          return (
-            <div
-              key={badge.threshold}
-              className="rounded-2xl p-3 flex items-center gap-3"
-              style={{
-                backgroundColor: 'var(--color-premium-surface)',
-                border: `1.5px solid ${unlocked ? 'var(--color-premium-gold-400)' : 'var(--color-premium-border)'}`,
-                opacity: unlocked ? 1 : 0.6,
-              }}
-            >
-              <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-[18px]"
-                style={{ backgroundColor: 'var(--color-premium-elevated)', border: '1.5px solid var(--color-premium-border)' }}
-              >
-                {badge.icon}
-              </div>
+        {(() => {
+          // Escalating tier colors across the 16 badges — copper through
+          // diamond — the same color-progression language already used
+          // for business levels elsewhere in the app, so an early badge
+          // and a late one read as genuinely different tiers of
+          // achievement, not the same gold card repeated 16 times.
+          const TIER_COLORS = ['#D68A4C', '#E0A040', '#E8E8E8', '#FFD700', '#3DE8DC', '#C061FF'];
+          const nextBadgeThreshold = PRESTIGE_BADGES.find((b) => totalLevelSum < b.threshold)?.threshold;
 
-              <div className="flex-1 min-w-0">
-                <div className="flex justify-between items-center gap-2">
-                  <h4 className="font-bold text-[11px] truncate" style={{ color: unlocked ? 'var(--color-premium-text)' : 'var(--color-premium-text-secondary)' }}>
-                    {badge.name}
-                  </h4>
-                  {unlocked && (
-                    <span
-                      className="text-[8px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full flex-shrink-0"
-                      style={{ backgroundColor: 'var(--color-premium-elevated)', color: 'var(--color-premium-green-500)', border: '1px solid var(--color-premium-green-500)' }}
-                    >
-                      Unlocked
-                    </span>
-                  )}
-                </div>
-                <p className="text-[9.5px] leading-snug mt-1" style={{ color: 'var(--color-premium-text-secondary)' }}>
-                  {badge.threshold === 480
-                    ? 'Fully master every business in every district.'
-                    : `Reach ${badge.threshold} total business levels across CoralBay.`}
-                </p>
-                <div className="w-full h-1 rounded-full mt-2 overflow-hidden" style={{ backgroundColor: 'var(--color-premium-track)' }}>
-                  <div
-                    className="h-full rounded-full"
-                    style={{ width: `${progress}%`, backgroundColor: unlocked ? 'var(--color-premium-gold-400)' : 'var(--color-premium-border-strong)' }}
+          return PRESTIGE_BADGES.map((badge, i) => {
+            const unlocked = totalLevelSum >= badge.threshold;
+            const progress = Math.min(100, Math.round((totalLevelSum / badge.threshold) * 100));
+            const isNextUp = badge.threshold === nextBadgeThreshold;
+            const tierColor = TIER_COLORS[Math.min(i, TIER_COLORS.length - 1)];
+
+            return (
+              <div
+                key={badge.threshold}
+                className="rounded-2xl p-3 flex items-center gap-3 relative overflow-hidden"
+                style={
+                  unlocked
+                    ? {
+                        background: `linear-gradient(135deg, ${tierColor}45 0%, var(--color-premium-surface) 70%)`,
+                        border: `1.5px solid ${tierColor}`,
+                        boxShadow: `0 4px 14px ${tierColor}33, inset 0 1px 0 rgba(255,255,255,0.15)`,
+                      }
+                    : isNextUp
+                    ? { backgroundColor: 'var(--color-premium-surface)', border: `1.5px solid ${tierColor}66` }
+                    : { backgroundColor: 'var(--color-premium-elevated)', border: '1.5px solid var(--color-premium-border)', opacity: 0.55 }
+                }
+              >
+                {unlocked && (
+                  <motion.div
+                    className="absolute -right-4 -top-4 w-16 h-16 rounded-full pointer-events-none"
+                    style={{ background: `radial-gradient(circle, ${tierColor}55, transparent 70%)` }}
+                    animate={{ opacity: [0.5, 1, 0.5] }}
+                    transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
                   />
+                )}
+
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-[18px] relative"
+                  style={
+                    unlocked
+                      ? { background: `linear-gradient(180deg, ${tierColor}dd, ${tierColor}88)`, boxShadow: `0 0 10px ${tierColor}88` }
+                      : { backgroundColor: 'var(--color-premium-elevated)', border: '1.5px solid var(--color-premium-border)' }
+                  }
+                >
+                  {unlocked ? badge.icon : <Lock size={14} color="var(--color-premium-text-secondary)" />}
+                </div>
+
+                <div className="flex-1 min-w-0 relative">
+                  <div className="flex justify-between items-center gap-2">
+                    <h4 className="font-bold text-[11px] truncate" style={{ color: unlocked ? '#fff' : 'var(--color-premium-text-secondary)' }}>
+                      {badge.name}
+                    </h4>
+                    {unlocked ? (
+                      <span
+                        className="text-[8px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: tierColor, color: '#1a130e' }}
+                      >
+                        Unlocked
+                      </span>
+                    ) : isNextUp ? (
+                      <span
+                        className="text-[8px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: 'transparent', color: tierColor, border: `1px solid ${tierColor}` }}
+                      >
+                        Next Up
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="text-[9.5px] leading-snug mt-1" style={{ color: unlocked ? 'rgba(255,255,255,0.75)' : 'var(--color-premium-text-secondary)' }}>
+                    {badge.threshold === 480
+                      ? 'Fully master every business in every district.'
+                      : `Reach ${badge.threshold} total business levels across CoralBay.`}
+                  </p>
+                  <div className="w-full h-1.5 rounded-full mt-2 overflow-hidden" style={{ backgroundColor: 'rgba(0,0,0,0.3)' }}>
+                    <motion.div
+                      className="h-full rounded-full"
+                      style={{ backgroundColor: unlocked ? tierColor : isNextUp ? tierColor : 'var(--color-premium-border-strong)' }}
+                      initial={{ width: 0 }}
+                      animate={{ width: `${progress}%` }}
+                      transition={{ duration: 0.6, ease: 'easeOut' }}
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          });
+        })()}
       </div>
 
 

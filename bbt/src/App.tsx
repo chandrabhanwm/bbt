@@ -12,6 +12,7 @@ import { DailyRewardCards } from './components/DailyRewardCards';
 import { ShareEarnCard } from './components/ShareEarnCard';
 import { RivalCalloutCard } from './components/RivalCalloutCard';
 import { DailyStreakCard } from './components/DailyStreakCard';
+import { StreakWheelModal } from './components/StreakWheelModal';
 import { BusinessGridView } from './components/BusinessGridView';
 import { FooterTipBar } from './components/FooterTipBar';
 import { ShopDetailSheet } from './components/ShopDetailSheet';
@@ -217,6 +218,7 @@ function AppInner({ currentUid }: { currentUid: string }) {
   // initializer, which isn't safe; a later effect reads this once to
   // decide whether to show the streak celebration.
   const streakResultRef = useRef<{ advanced: boolean; rewardAmount: number; newStreak: number; wasBroken: boolean } | null>(null);
+  const [streakWheelState, setStreakWheelState] = useState<{ reward: number; day: number } | null>(null);
 
   const [stats, setStats] = useState<PlayerStats>(() => {
     // A genuinely brand-new player starts their streak immediately at
@@ -849,7 +851,7 @@ function AppInner({ currentUid }: { currentUid: string }) {
         color: 'gold',
       });
     } else {
-      pushNewsEvent(`🔥 Day ${result.newStreak} streak — +₹${result.rewardAmount.toLocaleString('en-IN')}`);
+      setStreakWheelState({ reward: result.rewardAmount, day: result.newStreak });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -1558,6 +1560,13 @@ function AppInner({ currentUid }: { currentUid: string }) {
             trigger reuses this directly instead of copy-pasting a third. */}
         <AnimatePresence>
           {milestone && !poolClaimUI && <MilestoneOverlay data={milestone} />}
+          {streakWheelState && (
+            <StreakWheelModal
+              targetReward={streakWheelState.reward}
+              streakDay={streakWheelState.day}
+              onClose={() => setStreakWheelState(null)}
+            />
+          )}
         </AnimatePresence>
 
       </div>

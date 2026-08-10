@@ -73,6 +73,62 @@ export const DistrictNode: React.FC<DistrictNodeProps> = ({ district, onSelect, 
       role="button"
       aria-label={`${district.name} — ${status}`}
     >
+      {/* Rotating beacon — a genuine spotlight behind the current node,
+          not just a bigger glow. SVG can't use a CSS conic-gradient
+          directly, so this achieves the same "rays radiating outward"
+          effect with a ring of thin tapered spokes, rotated slowly as a
+          group — the same idea as the light rays used in the big
+          full-screen celebrations, adapted to SVG. */}
+      {isCurrent && (
+        <motion.g
+          animate={{ rotate: 360 }}
+          transition={{ duration: 10, repeat: Infinity, ease: 'linear' }}
+          style={{ transformOrigin: '0px 0px' }}
+        >
+          {Array.from({ length: 10 }).map((_, i) => (
+            <rect
+              key={i}
+              x={-2} y={-(nodeRadius + 34)} width={4} height={26}
+              rx={2}
+              fill="var(--color-premium-gold-400)"
+              opacity={0.28}
+              transform={`rotate(${i * 36})`}
+            />
+          ))}
+        </motion.g>
+      )}
+
+      {/* Sparkle celebration — small twinkling points around a fully
+          completed district, playing continuously rather than only at
+          the moment of completion, so a finished district keeps
+          reading as a genuine, ongoing achievement every time the
+          player looks at the map, not just once. */}
+      {status === 'completed' && (
+        <>
+          {[
+            { angle: 20, dist: nodeRadius + 14, delay: 0 },
+            { angle: 160, dist: nodeRadius + 10, delay: 0.6 },
+            { angle: 260, dist: nodeRadius + 16, delay: 1.1 },
+          ].map((s, i) => {
+            const rad = (s.angle * Math.PI) / 180;
+            return (
+              <motion.text
+                key={i}
+                x={Math.cos(rad) * s.dist}
+                y={Math.sin(rad) * s.dist}
+                fontSize={10}
+                textAnchor="middle"
+                animate={{ opacity: [0, 1, 0], scale: [0.6, 1.1, 0.6] }}
+                transition={{ duration: 1.8, repeat: Infinity, delay: s.delay, ease: 'easeInOut' }}
+                style={{ transformOrigin: `${Math.cos(rad) * s.dist}px ${Math.sin(rad) * s.dist}px` }}
+              >
+                ✨
+              </motion.text>
+            );
+          })}
+        </>
+      )}
+
       {/* "You are here" — the one district the player is actually
           playing in right now. Sits above the node, distinct from the
           completion glow and lock icon, so it reads at a glance as
