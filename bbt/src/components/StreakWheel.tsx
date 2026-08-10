@@ -32,7 +32,14 @@ function describeSlice(cx: number, cy: number, r: number, startAngle: number, en
 
 export const StreakWheel: React.FC<StreakWheelProps> = ({ targetReward, streakDay, onSpinComplete }) => {
   const [spinning, setSpinning] = useState(false);
-  const [rotation, setRotation] = useState(0);
+  // Randomized starting orientation — with the previous static 0, the
+  // wheel's very first segment (₹500) always sat mathematically exact
+  // under the fixed pointer before any spin happened. If a player
+  // glimpsed the wheel before tapping Spin, or the animation felt
+  // fast, that's what looked like the actual result. Starting at a
+  // random angle means nothing meaningful is ever shown at the
+  // pointer until the real spin genuinely lands there.
+  const [rotation, setRotation] = useState(() => Math.random() * 360);
   const [revealed, setRevealed] = useState(false);
 
   // The segment index this spin must land on — the wheel's own reward

@@ -97,18 +97,22 @@ export const CityMapScreen: React.FC<CityMapScreenProps> = ({ onOpenDistrict, on
     <div
       className="relative w-full h-full overflow-hidden select-none"
       style={{
-        // Layered terrain zones — boosted to genuinely visible strength.
-        // An earlier pass used 0.06-0.10 opacity here, which read as
-        // essentially invisible on a real device screen — the same
-        // mistake already made and corrected once before on the
-        // business card glow. This time the values are strong enough
-        // to actually register at a glance, not just technically present
-        // in the DOM.
+        // A genuinely bright, saturated world — not the app's dark
+        // theme with subtle color washes on top. Real map screens in
+        // this genre (Coin Master, Township) are daylit, saturated
+        // worlds; a map inheriting the app's dark premium palette with
+        // low-opacity tints was never going to read as "colorful,"
+        // no matter how the tints were tuned. This breaks from the
+        // app's dark theme deliberately, scoped to just this screen —
+        // a warm coastal sky, fitting CoralBay's own theme, with bold
+        // saturated terrain patches rather than translucent hints of
+        // color.
         background: `
-          radial-gradient(55% 40% at 25% 85%, rgba(212,167,44,0.28) 0%, transparent 100%),
-          radial-gradient(50% 35% at 75% 15%, rgba(45,190,200,0.22) 0%, transparent 100%),
-          radial-gradient(60% 45% at 70% 70%, rgba(150,90,220,0.20) 0%, transparent 100%),
-          radial-gradient(120% 90% at 50% 35%, var(--color-premium-elevated) 0%, var(--color-premium-bg) 75%)
+          radial-gradient(45% 35% at 20% 15%, #4DD8C4 0%, transparent 100%),
+          radial-gradient(50% 40% at 80% 10%, #FFB86B 0%, transparent 100%),
+          radial-gradient(55% 45% at 30% 90%, #2E9E6B 0%, transparent 100%),
+          radial-gradient(50% 40% at 85% 75%, #E8A23D 0%, transparent 100%),
+          linear-gradient(180deg, #1E6E8C 0%, #17506B 45%, #0F3A4D 100%)
         `,
       }}
     >
