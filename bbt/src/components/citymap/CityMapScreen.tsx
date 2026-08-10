@@ -116,35 +116,19 @@ export const CityMapScreen: React.FC<CityMapScreenProps> = ({ onOpenDistrict, on
         `,
       }}
     >
-      {/* City skyline silhouette — a fixed atmospheric backdrop, doesn't
-          pan/zoom with the map content itself. Same thin gold line-art
-          technique as the Footer Tip Bar's skyline, just scaled up. This
-          is what actually delivers "city style background" — texture and
-          atmosphere, not brightness. */}
+
+      {/* Gentle waves along the bottom edge — replaces the old dark-theme
+          city skyline silhouette, which was line-art of office towers
+          and had zero relationship to a bright coastal world. Layered,
+          softly rolling wave shapes fit what this map actually is. */}
       <svg
-        viewBox="0 0 400 160"
+        viewBox="0 0 400 100"
         className="absolute inset-x-0 bottom-0 w-full pointer-events-none z-0"
-        style={{ height: '22%', opacity: 0.14 }}
+        style={{ height: '14%', opacity: 0.35 }}
         preserveAspectRatio="xMidYMax slice"
       >
-        <g fill="none" stroke="var(--color-premium-gold-400)" strokeWidth="2">
-          <rect x="8" y="70" width="28" height="90" />
-          <rect x="42" y="40" width="24" height="120" />
-          <rect x="70" y="85" width="20" height="75" />
-          <line x1="80" y1="85" x2="80" y2="60" />
-          <rect x="96" y="20" width="32" height="140" />
-          <line x1="112" y1="20" x2="112" y2="4" />
-          <rect x="134" y="60" width="24" height="100" />
-          <rect x="162" y="95" width="20" height="65" />
-          <rect x="188" y="30" width="28" height="130" />
-          <rect x="222" y="70" width="24" height="90" />
-          <rect x="252" y="48" width="20" height="112" />
-          <rect x="278" y="80" width="24" height="80" />
-          <rect x="308" y="34" width="28" height="126" />
-          <line x1="322" y1="34" x2="322" y2="14" />
-          <rect x="342" y="66" width="24" height="94" />
-          <rect x="372" y="90" width="20" height="70" />
-        </g>
+        <path d="M0,50 Q50,20 100,50 T200,50 T300,50 T400,50 L400,100 L0,100 Z" fill="#1E6E8C" />
+        <path d="M0,65 Q50,40 100,65 T200,65 T300,65 T400,65 L400,100 L0,100 Z" fill="#17506B" opacity="0.7" />
       </svg>
 
       {/* Slowly drifting clouds — fixed to the viewport (not part of the

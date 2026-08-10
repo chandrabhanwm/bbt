@@ -188,8 +188,8 @@ export const DistrictNode: React.FC<DistrictNodeProps> = ({ district, onSelect, 
           here, not just to the glow/shadow around it. */}
       <defs>
         <radialGradient id={`node-fill-${district.id}`} cx="35%" cy="30%" r="75%">
-          <stop offset="0%" stopColor="var(--color-premium-elevated)" />
-          <stop offset="100%" stopColor="var(--color-premium-surface)" />
+          <stop offset="0%" stopColor={status === 'completed' ? '#B8E8C8' : status === 'unlocked' ? '#FFE9B8' : '#8A9BA8'} />
+          <stop offset="100%" stopColor={status === 'completed' ? '#4FAE6E' : status === 'unlocked' ? '#E0A840' : '#5A6B78'} />
         </radialGradient>
       </defs>
       <circle

@@ -73,8 +73,15 @@ export const RoadPath: React.FC<RoadPathProps> = ({ id, from, to, active, travel
           meant for subtle panel edges, not a prominent map feature) —
           reused here it made the whole road read as a faint thin line
           rather than a substantial physical path. */}
-      <path d={d} stroke="#5A6E80" strokeWidth={12} fill="none" strokeLinecap="round" />
-      <path d={d} stroke="#7A92A6" strokeWidth={5} fill="none" strokeLinecap="round" opacity="0.5" />
+      {/* Road bed — a warm sandy path, not the old gray-blue tech-line
+          color, which read as a UI element rather than a physical path
+          once the map background itself became bright and saturated.
+          A lighter "worn stone" texture pattern is layered on top via a
+          dashed stroke, simulating stepping stones/pavers rather than
+          a flat single-color band. */}
+      <path d={d} stroke="#C99A5B" strokeWidth={13} fill="none" strokeLinecap="round" />
+      <path d={d} stroke="#8B6B3D" strokeWidth={13} fill="none" strokeLinecap="round" opacity="0.25" strokeDasharray="1 13" />
+      <path d={d} stroke="#E8C89A" strokeWidth={6} fill="none" strokeLinecap="round" opacity="0.6" />
 
       {/* Soft white glow specifically for traveled roads — a plain color
           change wouldn't read as "glowing," this adds a real blurred
