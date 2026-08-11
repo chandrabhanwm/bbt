@@ -4,6 +4,7 @@ import { Users, Store, TrendingUp as UpgradeIcon, Wallet, Gift } from 'lucide-re
 import { LeaderboardEntry } from '../services/SaveService';
 import { formatCash } from '../utils/formatCash';
 import { getCurrentBadge } from '../data/prestigeBadges';
+import { PlayerAvatar } from './PlayerAvatar';
 import { playClick } from '../utils/audio';
 import { formatCooldownClock } from '../utils/cooldown';
 
@@ -371,14 +372,14 @@ const LeaderboardTable: React.FC<{
             </span>
 
             <div
-              className="w-9 h-9 rounded-full flex items-center justify-center text-base flex-shrink-0"
+              className="w-9 h-9 rounded-full flex items-center justify-center text-base flex-shrink-0 overflow-hidden"
               style={{
                 backgroundColor: 'var(--color-premium-elevated)',
                 border: `2px solid ${rankAccent ?? 'var(--color-premium-border)'}`,
                 boxShadow: rankAccent ? `0 0 10px ${rankAccent}88` : undefined,
               }}
             >
-              {entry.avatarEmoji}
+              <PlayerAvatar value={entry.avatarEmoji} className="w-full h-full text-base" fontSize={16} />
             </div>
 
             <div className="flex-1 min-w-0">

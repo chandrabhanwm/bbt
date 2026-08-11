@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { LeaderboardEntry } from '../services/SaveService';
+import { PlayerAvatar } from './PlayerAvatar';
 
 interface RivalCalloutCardProps {
   leaderboard: Array<LeaderboardEntry & { uid: string }>;
@@ -54,10 +55,10 @@ export const RivalCalloutCard: React.FC<RivalCalloutCardProps> = ({ leaderboard,
         {/* Me */}
         <div className="flex flex-col items-center gap-1 w-16">
           <div
-            className="w-11 h-11 rounded-full flex items-center justify-center text-xl"
+            className="w-11 h-11 rounded-full flex items-center justify-center text-xl overflow-hidden"
             style={{ backgroundColor: 'rgba(255,255,255,0.12)', border: '2px solid rgba(255,255,255,0.5)' }}
           >
-            {myAvatar}
+            <PlayerAvatar value={myAvatar} className="w-full h-full text-xl" fontSize={20} />
           </div>
           <span className="text-[9px] font-bold text-white/85">You</span>
         </div>
@@ -80,10 +81,10 @@ export const RivalCalloutCard: React.FC<RivalCalloutCardProps> = ({ leaderboard,
         {/* Rival */}
         <div className="flex flex-col items-center gap-1 w-16">
           <div
-            className="w-11 h-11 rounded-full flex items-center justify-center text-xl"
+            className="w-11 h-11 rounded-full flex items-center justify-center text-xl overflow-hidden"
             style={{ backgroundColor: 'rgba(255,255,255,0.12)', border: '2px solid #FF6B6B' }}
           >
-            {rival.avatarEmoji}
+            <PlayerAvatar value={rival.avatarEmoji} className="w-full h-full text-xl" fontSize={20} />
           </div>
           <span className="text-[9px] font-bold truncate max-w-[64px] text-white/85">{rival.playerName}</span>
         </div>

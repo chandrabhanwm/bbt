@@ -7,6 +7,7 @@ import { bastiCity } from '../data/cityMapData';
 import { getDistrictProgress, getEmpireTotalInvested } from '../utils/districtProgress';
 import { derivePlayerId } from '../utils/playerIdentity';
 import { PRESTIGE_BADGES, getTotalLevelSum } from '../data/prestigeBadges';
+import { PlayerAvatar } from './PlayerAvatar';
 import { getLegacyStatus } from '../utils/legacy';
 import { CoinIcon } from './CoinIcon';
 import { formatCash } from '../utils/formatCash';
@@ -170,10 +171,10 @@ export const PortfolioScreen: React.FC<PortfolioScreenProps> = ({
         />
         <div className="relative w-16 h-16 flex-shrink-0">
           <div
-            className="w-full h-full rounded-full flex items-center justify-center text-3xl"
+            className="w-full h-full rounded-full flex items-center justify-center text-3xl overflow-hidden"
             style={{ backgroundColor: '#2A1F08', border: '2.5px solid #FFD700', boxShadow: '0 0 14px rgba(255,215,0,0.6)' }}
           >
-            {avatarEmoji}
+            <PlayerAvatar value={avatarEmoji} className="w-full h-full text-3xl" fontSize={30} />
           </div>
         </div>
 

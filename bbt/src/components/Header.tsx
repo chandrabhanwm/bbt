@@ -6,6 +6,7 @@ import { playClick } from '../utils/audio';
 import { useCountUp } from '../utils/useCountUp';
 import { formatCash } from '../utils/formatCash';
 import { CoinIcon } from './CoinIcon';
+import { PlayerAvatar } from './PlayerAvatar';
 import { getCurrentBadge } from '../data/prestigeBadges';
 
 // Same props contract as before — App.tsx's call site needs no changes.
@@ -118,8 +119,8 @@ export const Header: React.FC<HeaderProps> = ({
             className="flex-shrink-0 relative w-10 h-10 cursor-pointer before:content-[''] before:absolute before:-inset-1"
             title="Change avatar"
           >
-            <div className="w-full h-full rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--color-premium-surface)', border: `1.5px solid ${GOLD_BORDER}` }}>
-              <span className="text-lg leading-none">{avatarEmoji}</span>
+            <div className="w-full h-full rounded-full flex items-center justify-center overflow-hidden" style={{ backgroundColor: 'var(--color-premium-surface)', border: `1.5px solid ${GOLD_BORDER}` }}>
+              <PlayerAvatar value={avatarEmoji} className="w-full h-full text-lg leading-none" fontSize={18} />
             </div>
             <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center" style={{ backgroundColor: GOLD }}>
               <Crown size={9} color="var(--color-premium-bg)" fill="var(--color-premium-bg)" />

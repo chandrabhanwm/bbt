@@ -675,6 +675,19 @@ function AppInner({ currentUid }: { currentUid: string }) {
     });
     setShowConfetti(true);
     setTimeout(() => setShowConfetti(false), progressionConfig.celebrationDurationMs);
+
+    // Import the player's real name and photo from their Google
+    // account — deliberately gated on isBrandNewPlayer, the exact same
+    // signal the welcome celebration above uses, so this only ever
+    // runs on a genuinely first-ever sign-in. A returning player who's
+    // already customized their name or avatar (via the edit UI) never
+    // has it silently overwritten on a later login — this is purely
+    // the starting default, the same role "SmartTycoon" and the random
+    // emoji played before.
+    const googleName = auth.currentUser?.displayName;
+    if (googleName) setPlayerName(googleName);
+    const googlePhoto = auth.currentUser?.photoURL;
+    if (googlePhoto) setAvatarEmoji(googlePhoto);
   }, [isBrandNewPlayer]);
 
   // GAME LOOP (Pool ticks every 1 second; cash is frozen until claimed)
