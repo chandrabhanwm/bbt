@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { motion } from 'motion/react';
 import { Users, Store, TrendingUp as UpgradeIcon, Wallet, Gift } from 'lucide-react';
 import { LeaderboardEntry } from '../services/SaveService';
 import { formatCash } from '../utils/formatCash';
@@ -143,6 +144,10 @@ export const LeaderboardTab: React.FC<LeaderboardTabProps> = ({
         </div>
       </div>
 
+      {view === 'weekly' && (
+        <ContestStandingCard rank={myWeeklyRank} points={myWeeklyPoints} />
+      )}
+
       {view === 'weekly' && <HowToEarnRow />}
 
       {activeBoard.length === 0 ? (
@@ -166,27 +171,123 @@ export const LeaderboardTab: React.FC<LeaderboardTabProps> = ({
   );
 };
 
+/** The contest's own hero moment — a player's real rank and points,
+ *  given the same weight the Portfolio's identity card gets, instead
+ *  of being buried as just another row in a shared table. A genuine,
+ *  distinct trophy/indigo identity, deliberately different from every
+ *  other themed card in the app (gold Overall header, orange Streak,
+ *  purple Rival, pink Share) so the contest reads as its own thing. */
+const ContestStandingCard: React.FC<{ rank: number | null; points: number }> = ({ rank, points }) => (
+  <div
+    className="rounded-2xl p-4 relative overflow-hidden"
+    style={{
+      background: 'linear-gradient(135deg, #3D2FA8 0%, #241C6B 60%, #14103F 100%)',
+      boxShadow: '0 8px 20px rgba(60,40,180,0.35), inset 0 1.5px 0 rgba(255,255,255,0.18)',
+    }}
+  >
+    <motion.div
+      className="absolute -right-8 -top-8 w-32 h-32 rounded-full pointer-events-none"
+      style={{ background: 'radial-gradient(circle, rgba(140,110,255,0.4), transparent 70%)' }}
+      animate={{ opacity: [0.5, 0.9, 0.5], scale: [1, 1.15, 1] }}
+      transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+    />
+    <div className="relative flex items-center gap-3.5">
+      <motion.div
+        className="text-[32px] leading-none flex-shrink-0"
+        animate={{ rotate: [-4, 4, -4], y: [0, -2, 0] }}
+        transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
+        style={{ filter: 'drop-shadow(0 0 10px rgba(150,130,255,0.8))' }}
+      >
+        🏆
+      </motion.div>
+      <div className="flex-1 min-w-0">
+        <div className="text-[9.5px] font-bold uppercase tracking-widest text-white/60">
+          Your Contest Standing
+        </div>
+        <div className="flex items-baseline gap-2 mt-0.5">
+          <span className="text-[24px] font-black text-white leading-none">
+            {rank !== null ? `#${rank}` : '—'}
+          </span>
+          <span className="text-[13px] font-bold" style={{ color: '#B8A8FF' }}>
+            {points.toLocaleString('en-IN')} pts
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
 const HowToEarnRow: React.FC = () => {
+  // Real, current point values — kept in sync with weeklyContest.ts's
+  // own POINTS table by hand, same as any other display-layer mirror
+  // of a source of truth elsewhere in the app. An earlier version of
+  // this row showed every action as a flat "+10", which had gone
+  // silently out of date the moment the point system was restructured
+  // — a real bug (showing wrong numbers to players), not just a style
+  // problem, caught and fixed alongside this visual rebuild.
   const items = [
-    { icon: Store, label: 'Buy', color: '#c96b3f' },
-    { icon: UpgradeIcon, label: 'Upgrade', color: '#4a90d9' },
-    { icon: Wallet, label: 'Claim', color: '#f2c14e' },
-    { icon: Gift, label: 'Scratch card', color: '#e05a9e' },
-    { icon: Users, label: 'Refer a friend', color: '#5ac97a' },
+    { icon: Gift, label: 'Scratch card', points: 5, color: '#e05a9e' },
+    { icon: Wallet, label: 'Claim pool', points: 10, color: '#f2c14e' },
+    { icon: UpgradeIcon, label: 'Upgrade', points: 15, color: '#4a90d9' },
+    { icon: Store, label: 'New business', points: 20, color: '#c96b3f' },
+    { icon: Users, label: 'Refer a friend', points: 50, color: '#5ac97a' },
   ];
   return (
-    <div className="rounded-2xl p-3" style={{ backgroundColor: 'var(--color-premium-surface)', border: '1px solid var(--color-premium-border)' }}>
+    <div
+      className="rounded-2xl p-3.5 relative overflow-hidden"
+      style={{
+        background: 'linear-gradient(160deg, rgba(90,60,220,0.14) 0%, var(--color-premium-surface) 70%)',
+        border: '1.5px solid rgba(120,90,255,0.35)',
+      }}
+    >
       <div className="text-[10.5px] font-bold mb-2" style={{ color: 'var(--color-premium-text)' }}>
-        Every one of these earns +10 points
+        How to earn points
       </div>
       <div className="grid grid-cols-5 gap-1.5">
-        {items.map(({ icon: Icon, label, color }) => (
+        {items.map(({ icon: Icon, label, points, color }) => (
           <div key={label} className="rounded-xl py-2 flex flex-col items-center gap-1" style={{ backgroundColor: 'var(--color-premium-elevated)' }}>
             <div className="w-7 h-7 rounded-full flex items-center justify-center" style={{ backgroundColor: `${color}22` }}>
               <Icon size={14} color={color} />
             </div>
             <span className="text-[7px] font-bold text-center leading-tight" style={{ color: 'var(--color-premium-text)' }}>{label}</span>
-            <span className="text-[9.5px] font-bold" style={{ color: 'var(--color-premium-green-500)' }}>+10</span>
+            <span className="text-[9.5px] font-bold" style={{ color: 'var(--color-premium-green-500)' }}>+{points}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Synergy bonus — called out on its own, separate row, since
+          it's the one point source tied directly to real strategy
+          (completing a synergy combo) rather than to raw activity, and
+          deserves to read as the standout bonus it actually is, not
+          just a sixth identical tile in the grid above. */}
+      <div
+        className="flex items-center gap-2 mt-2.5 rounded-xl px-2.5 py-2"
+        style={{ background: 'linear-gradient(90deg, rgba(61,232,220,0.18), transparent)', border: '1px solid rgba(61,232,220,0.4)' }}
+      >
+        <span className="text-[15px] leading-none">✨</span>
+        <span className="text-[9px] font-bold flex-1" style={{ color: 'var(--color-premium-text)' }}>
+          Discover a new synergy for a bonus
+        </span>
+        <span className="text-[11px] font-black" style={{ color: '#3DE8DC' }}>+30</span>
+      </div>
+
+      {/* Weekly reward tiers — the actual payoff for the rank this
+          whole dashboard tracks. Without this, the contest is just a
+          leaderboard to watch; this is what makes finishing week worth
+          something concrete. */}
+      <div className="text-[9.5px] font-bold mt-3 mb-1.5" style={{ color: 'var(--color-premium-text-secondary)' }}>
+        Weekly rewards
+      </div>
+      <div className="grid grid-cols-4 gap-1.5">
+        {[
+          { label: '#1', reward: 10000, color: '#FFD700' },
+          { label: '#2–3', reward: 5000, color: '#C0C8D4' },
+          { label: '#4–10', reward: 2000, color: '#CD8C4E' },
+          { label: 'Ranked', reward: 500, color: '#8A9BA8' },
+        ].map(({ label, reward, color }) => (
+          <div key={label} className="rounded-xl py-2 flex flex-col items-center" style={{ backgroundColor: 'var(--color-premium-elevated)', border: `1px solid ${color}55` }}>
+            <span className="text-[9px] font-black" style={{ color }}>{label}</span>
+            <span className="text-[8.5px] font-bold mt-0.5" style={{ color: 'var(--color-premium-green-500)' }}>₹{reward.toLocaleString('en-IN')}</span>
           </div>
         ))}
       </div>

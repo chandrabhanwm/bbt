@@ -200,6 +200,16 @@ export interface PlayerStats {
   currentStreak: number;
   longestStreak: number;
   lastStreakLoginDate: string;
+  /** Weekly contest rollover tracking — see App.tsx's rollover
+   *  detection effect and getContestWeekId() in weeklyContest.ts for
+   *  the full reasoning. lastSeenContestWeekId is the week identifier
+   *  as of the last time we checked; lastKnownWeeklyRank is the most
+   *  recent rank fetched while still within that same week — since
+   *  there's no exact server-side snapshot at the precise week
+   *  boundary, this "most recently known" value is what a reward is
+   *  based on once a new week is detected. */
+  lastSeenContestWeekId: string;
+  lastKnownWeeklyRank: number | null;
 
   /** Whether this player has made at least one pool claim since the
    *  2-hour cooldown was introduced. Defaults to false for every save,

@@ -4,6 +4,7 @@ import { getLegacyStatus } from '../utils/legacy';
 import { generateDailyGoal } from '../utils/dailyGoal';
 import { getEmpireTotalInvested } from '../utils/districtProgress';
 import { progressionConfig } from '../config/progressionConfig';
+import { getContestWeekId } from '../utils/weeklyContest';
 
 interface MilestoneState {
   icon: string;
@@ -63,6 +64,8 @@ export function useAccountActions({
         currentStreak: 0,
         longestStreak: 0,
         lastStreakLoginDate: '',
+        lastSeenContestWeekId: getContestWeekId(),
+        lastKnownWeeklyRank: null,
         // rank removed — replaced by a real, separately-fetched leaderboard rank
         level: 1,
         xp: 0,

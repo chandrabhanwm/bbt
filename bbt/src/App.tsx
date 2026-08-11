@@ -45,7 +45,7 @@ import { useDistrictPreview } from './hooks/useDistrictPreview';
 import { useAccountActions } from './hooks/useAccountActions';
 import { useSessionEnforcement } from './hooks/useSessionEnforcement';
 import { getCooldownRemainingSeconds, CLAIM_COOLDOWN_MS, formatCooldownClock } from './utils/cooldown';
-import { applyContestPoints, todayDateString, localDateStringOf } from './utils/weeklyContest';
+import { applyContestPoints, todayDateString, localDateStringOf, getContestWeekId, getContestReward } from './utils/weeklyContest';
 import { processStreakLogin, STREAK_MILESTONE_DAYS } from './utils/dailyStreak';
 import { CountdownClock } from './components/CountdownClock';
 import { progressionConfig, CURRENT_SAVE_VERSION } from './config/progressionConfig';
@@ -236,6 +236,8 @@ function AppInner({ currentUid }: { currentUid: string }) {
       currentStreak: freshStreak.newStreak,
       longestStreak: freshStreak.newLongestStreak,
       lastStreakLoginDate: todayDateString(),
+      lastSeenContestWeekId: getContestWeekId(),
+      lastKnownWeeklyRank: null,
       // rank removed — replaced by a real, separately-fetched leaderboard rank
       level: 1,
       xp: 0,
@@ -327,6 +329,8 @@ function AppInner({ currentUid }: { currentUid: string }) {
           currentStreak: streakResult.newStreak,
           longestStreak: streakResult.newLongestStreak,
           lastStreakLoginDate: streakResult.advanced ? todayDateString() : (parsed.lastStreakLoginDate ?? ''),
+          lastSeenContestWeekId: parsed.lastSeenContestWeekId ?? getContestWeekId(),
+          lastKnownWeeklyRank: parsed.lastKnownWeeklyRank ?? null,
           // Existing saves predate Moment Zero and, by definition, already
           // have real progress — default both to true so a returning
           // player never sees the first-purchase/first-upgrade celebration
@@ -857,7 +861,55 @@ function AppInner({ currentUid }: { currentUid: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Achievement detection removed — replaced by the prestige badge
+  // Weekly contest rollover — runs every time a fresh weekly rank
+  // arrives from the periodic 15-minute Firestore fetch (see
+  // useCloudSync's myWeeklyRank), not on a fixed schedule of its own,
+  // since that's the only real signal available for "time has passed
+  // and the leaderboard may have changed." Reads stats directly rather
+  // than through a setStats updater, specifically so setMilestone can
+  // be called safely alongside it — calling a second state setter as a
+  // side effect inside an updater function isn't safe in React.
+  useEffect(() => {
+    if (myWeeklyRank === null && weeklyContestBoard.length === 0) return; // no fetch has completed yet this session
+    const currentWeekId = getContestWeekId();
+
+    if (stats.lastSeenContestWeekId === currentWeekId) {
+      // Still the same contest week as last checked — just keep
+      // tracking the latest known rank, no reward yet since the week
+      // this rank belongs to hasn't ended.
+      if (stats.lastKnownWeeklyRank !== myWeeklyRank) {
+        setStats((prev) => ({ ...prev, lastKnownWeeklyRank: myWeeklyRank }));
+      }
+      return;
+    }
+
+    // The week has changed since we last checked — the week
+    // represented by lastSeenContestWeekId has ended. Reward based on
+    // the last rank we knew during that week, since there's no exact
+    // server-side snapshot at the precise boundary moment.
+    const reward = getContestReward(stats.lastKnownWeeklyRank);
+    setStats((prev) => ({
+      ...prev,
+      cash: prev.cash + reward,
+      weeklyPoints: 0,
+      lastSeenContestWeekId: currentWeekId,
+      lastKnownWeeklyRank: myWeeklyRank,
+    }));
+
+    if (reward > 0) {
+      playLevelUp();
+      const rank = stats.lastKnownWeeklyRank!;
+      setMilestone({
+        icon: '🏆',
+        title: rank === 1 ? '🏆 Contest Champion!' : `🏆 Rank #${rank} Finish!`,
+        message: rank === 1
+          ? `You topped last week's contest leaderboard.`
+          : `You finished last week's contest at rank #${rank}.`,
+        bonusText: `+₹${reward.toLocaleString('en-IN')} contest reward`,
+        color: 'gold',
+      });
+    }
+  }, [myWeeklyRank, weeklyContestBoard.length]);
   // system (data/prestigeBadges.ts), which now owns both the
   // celebration and the display in Portfolio. Running both would mean
   // two separate, overlapping "you unlocked something" popups for

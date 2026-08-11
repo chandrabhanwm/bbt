@@ -225,7 +225,7 @@ export function useBusinessActions({
             goal && !goal.claimed &&
             ((goal.type === 'buy_1' && isUnlocking) || (goal.type === 'upgrade_2' && !isUnlocking));
 
-          const { stats: withContestPoints, pointsAwarded } = applyContestPoints(statsPrev, 'buy_or_upgrade', isUnlocking);
+          const { stats: withContestPoints, pointsAwarded } = applyContestPoints(statsPrev, 'buy_or_upgrade', isUnlocking, !!newlyActiveSynergyName);
           contestPointsAwarded = pointsAwarded;
           return {
             ...withContestPoints,
