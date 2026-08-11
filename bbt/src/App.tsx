@@ -94,6 +94,46 @@ function generateFreshRewardCards(): RewardCard[] {
   return cards;
 }
 
+/** Cosmetic fields (name, emoji, description, etc.) are the game's own
+ *  definition of a business, not something a player's actions produce
+ *  — they should always reflect the latest data, the same way a
+ *  district's own name always does. Without this, a rebrand (a real
+ *  example: the app's own name changing between builds) would
+ *  permanently freeze an existing save's business names at whatever
+ *  they were the moment that player first saved, since a raw merge
+ *  otherwise lets old saved data silently override new definitions
+ *  forever. Real progress (level, cost, status) still comes from the
+ *  save, exactly as before — only the definition fields refresh.
+ *
+ *  Hoisted to module level (not just local to the localStorage-load
+ *  path below) specifically so the cloud-load path in useCloudSync can
+ *  also apply it — a real gap found and fixed after a rebrand: a
+ *  player whose data loads from the cloud (a new device, cleared
+ *  browser storage, or any cloud sync after the very first load) was
+ *  never getting this refresh at all, permanently stuck with whatever
+ *  cosmetic data was saved the first time, even after later code
+ *  changes. */
+function refreshCosmeticFields(savedBusinesses: Business[], seededBusinesses: Business[]): Business[] {
+  return savedBusinesses.map((saved) => {
+    const fresh = seededBusinesses.find((b) => b.id === saved.id);
+    if (!fresh) return saved; // no matching definition — keep as-is rather than drop it
+    return { ...saved, name: fresh.name, emoji: fresh.emoji, gradient: fresh.gradient, description: fresh.description, themeColor: fresh.themeColor };
+  });
+}
+
+/** Applies refreshCosmeticFields across every district in a full
+ *  businessesByDistrict map — used specifically to wrap cloud-loaded
+ *  data before it ever reaches app state, the same guarantee the
+ *  localStorage path already had. */
+function refreshCosmeticFieldsAcrossDistricts(bbd: Record<string, Business[]>): Record<string, Business[]> {
+  const seeded = seedAllDistricts();
+  const refreshed: Record<string, Business[]> = {};
+  for (const districtId of Object.keys(bbd)) {
+    refreshed[districtId] = seeded[districtId] ? refreshCosmeticFields(bbd[districtId], seeded[districtId]) : bbd[districtId];
+  }
+  return refreshed;
+}
+
 /** Seeds a fresh businesses-by-district map from scratch — every district
  *  with economy data gets its own independent Business[] the moment the
  *  app first loads, so switching to any of them (once unlocked) just works
@@ -145,24 +185,6 @@ function AppInner({ currentUid }: { currentUid: string }) {
   // STATE DEFINITIONS
   const [businessesByDistrict, setBusinessesByDistrict] = useState<Record<string, Business[]>>(() => {
     const seeded = seedAllDistricts();
-
-    // Cosmetic fields (name, emoji, description, etc.) are the game's
-    // own definition of a business, not something a player's actions
-    // produce — they should always reflect the latest data, the same
-    // way a district's own name always does. Without this, a rebrand
-    // (a real example: the app's own name changing between builds)
-    // would permanently freeze an existing save's business names at
-    // whatever they were the moment that player first saved, since
-    // the raw object-spread merge below otherwise lets old saved data
-    // silently override new definitions forever. Real progress
-    // (level, cost, status) still comes from the save, exactly as
-    // before — only the definition fields refresh.
-    const refreshCosmeticFields = (savedBusinesses: Business[], seededBusinesses: Business[]): Business[] =>
-      savedBusinesses.map((saved) => {
-        const fresh = seededBusinesses.find((b) => b.id === saved.id);
-        if (!fresh) return saved; // no matching definition — keep as-is rather than drop it
-        return { ...saved, name: fresh.name, emoji: fresh.emoji, gradient: fresh.gradient, description: fresh.description, themeColor: fresh.themeColor };
-      });
 
     const saved = shouldTrustLocalSave ? localStorage.getItem('basti_businesses_by_district') : null;
     if (saved) {
@@ -619,7 +641,8 @@ function AppInner({ currentUid }: { currentUid: string }) {
     hadNoLocalSaveAtBoot: hadNoLocalSaveAtBootRef.current,
     businessesByDistrict, stats, avatarEmoji, playerName, currentDistrictId,
     unlockedDistrictsMap, rewardedDistrictsMap,
-    setBusinessesByDistrict, setStats, setAvatarEmoji, setPlayerName, restoreDistrictState,
+    setBusinessesByDistrict: (v: Record<string, Business[]>) => setBusinessesByDistrict(refreshCosmeticFieldsAcrossDistricts(v)),
+    setStats, setAvatarEmoji, setPlayerName, restoreDistrictState,
   });
 
   // Single-active-session enforcement — if this account was opened on
