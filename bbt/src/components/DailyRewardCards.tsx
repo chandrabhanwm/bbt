@@ -24,7 +24,7 @@ interface DailyRewardCardsProps {
 const SWIPE_THRESHOLD = 40; // px of drag distance before we treat it as a scratch
 
 const BRANDS = [
-  'CoralBay Cola Co. 🥤',
+  'Basti Cola Co. 🥤',
   'Chaiwala Crypto Coins 🪙',
   'Auto rickshaw Racing Pro 🛺',
   'Gully Cricket Manager 🏏',
@@ -53,7 +53,7 @@ const ROSE = '#D4547E'; // warm-leaning rose, distinct from the app's gold accen
 export const DailyRewardCards: React.FC<DailyRewardCardsProps> = ({ cards, onScratch, onClaim, lastCardClaimAt }) => {
   const [adCardIndex, setAdCardIndex] = useState<number | null>(null);
   const [adCountdown, setAdCountdown] = useState(6);
-  const [adBrand, setAdBrand] = useState('CoralBay Cola Co.');
+  const [adBrand, setAdBrand] = useState('Basti Cola Co.');
   const [justRevealedIndex, setJustRevealedIndex] = useState<number | null>(null);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [lockedTapMessage, setLockedTapMessage] = useState<number | null>(null);
@@ -291,7 +291,7 @@ export const DailyRewardCards: React.FC<DailyRewardCardsProps> = ({ cards, onScr
                   </div>
                 </motion.div>
                 <h2 className="font-display font-bold text-lg text-white leading-tight uppercase tracking-wide">
-                  Become the CoralBay Kingpin!
+                  Become the Basti Kingpin!
                 </h2>
                 <p className="text-xs text-slate-400 mt-2.5 max-w-[240px] leading-relaxed font-medium">
                   Boost your progress! Build stores, leverage upgrades, and outperform rivals.
@@ -308,7 +308,7 @@ export const DailyRewardCards: React.FC<DailyRewardCardsProps> = ({ cards, onScr
 
               <div className="p-4 bg-gradient-to-t from-black/80 to-transparent text-center relative z-10">
                 <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
-                  Thank you for supporting CoralBay Business Tycoon!
+                  Thank you for supporting Basti Business Tycoon!
                 </span>
               </div>
             </motion.div>

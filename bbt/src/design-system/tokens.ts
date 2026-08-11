@@ -1,5 +1,5 @@
 /**
- * DESIGN TOKENS — CoralBay Business Tycoon, Premium Design System
+ * DESIGN TOKENS — Basti Business Tycoon, Premium Design System
  * ============================================================
  * Raw primitive values only. Nothing here knows about buttons, cards, or
  * any specific component — that mapping lives in theme.ts. This file is
@@ -13,7 +13,7 @@
  */
 
 /**
- * DESIGN TOKENS — CoralBay Business Tycoon, Premium Design System
+ * DESIGN TOKENS — Basti Business Tycoon, Premium Design System
  * ============================================================
  * Raw primitive values only. Nothing here knows about buttons, cards, or
  * any specific component — that mapping lives in theme.ts. This file is

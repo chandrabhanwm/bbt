@@ -40,7 +40,7 @@ export const DailyStreakCard: React.FC<DailyStreakCardProps> = ({ currentStreak 
     <motion.div
       initial={{ opacity: 0, y: -6 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-2xl p-3.5 relative overflow-hidden"
+      className="rounded-2xl px-3.5 py-2.5 relative overflow-hidden"
       style={{
         background: showBreakWarning
           ? 'linear-gradient(135deg, #7A1F1F 0%, #4A1010 100%)'
@@ -53,35 +53,35 @@ export const DailyStreakCard: React.FC<DailyStreakCardProps> = ({ currentStreak 
           the app, applied here to the whole card since fire is the
           entire point of this one. */}
       <motion.div
-        className="absolute -right-6 -top-6 w-28 h-28 rounded-full pointer-events-none"
+        className="absolute -right-6 -top-6 w-24 h-24 rounded-full pointer-events-none"
         style={{ background: 'radial-gradient(circle, rgba(255,200,100,0.5), transparent 70%)' }}
         animate={{ scale: [1, 1.25, 1], opacity: [0.7, 1, 0.7] }}
         transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
       />
 
-      <div className="relative flex items-center gap-3">
+      <div className="relative flex items-center gap-2.5">
         <motion.div
-          className="text-[34px] leading-none flex-shrink-0"
+          className="text-[26px] leading-none flex-shrink-0"
           animate={{ scale: [1, 1.08, 0.97, 1], rotate: [0, -3, 3, 0] }}
           transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
-          style={{ filter: 'drop-shadow(0 0 10px rgba(255,150,50,0.9))' }}
+          style={{ filter: 'drop-shadow(0 0 8px rgba(255,150,50,0.9))' }}
         >
           🔥
         </motion.div>
 
         <div className="flex-1 min-w-0">
           <div className="flex items-baseline gap-1.5">
-            <span className="text-[24px] font-black text-white leading-none" style={{ textShadow: '0 2px 6px rgba(0,0,0,0.3)' }}>
+            <span className="text-[18px] font-black text-white leading-none" style={{ textShadow: '0 2px 6px rgba(0,0,0,0.3)' }}>
               {currentStreak}
             </span>
-            <span className="text-[12px] font-bold text-white/90">Day Streak</span>
+            <span className="text-[11px] font-bold text-white/90">Day Streak</span>
           </div>
           {showBreakWarning ? (
-            <div className="text-[10.5px] font-bold mt-1" style={{ color: '#FFD4A8' }}>
+            <div className="text-[9.5px] font-bold mt-0.5" style={{ color: '#FFD4A8' }}>
               ⚠️ Breaks in {Math.max(1, Math.round(hoursLeft))}h — come back today!
             </div>
           ) : (
-            <div className="text-[10px] font-semibold mt-1 text-white/80">
+            <div className="text-[9.5px] font-semibold mt-0.5 text-white/80">
               Tomorrow: <span className="text-white font-bold">₹{nextReward.toLocaleString('en-IN')}</span>
             </div>
           )}
@@ -93,7 +93,7 @@ export const DailyStreakCard: React.FC<DailyStreakCardProps> = ({ currentStreak 
           draw the eye; days still ahead sit dim, visibly "not yet
           earned," giving the whole cycle a shape you can read in one
           glance instead of a bare number. */}
-      <div className="relative flex gap-1.5 mt-3">
+      <div className="relative flex gap-1.5 mt-2">
         {STREAK_REWARD_CYCLE.map((_, i) => {
           const dayNum = i + 1;
           const isPast = dayNum < cyclePosition;
@@ -101,7 +101,7 @@ export const DailyStreakCard: React.FC<DailyStreakCardProps> = ({ currentStreak 
           return (
             <motion.div
               key={i}
-              className="flex-1 h-1.5 rounded-full"
+              className="flex-1 h-1 rounded-full"
               style={{ backgroundColor: isPast || isCurrent ? '#FFD700' : 'rgba(255,255,255,0.22)' }}
               animate={isCurrent ? { opacity: [0.6, 1, 0.6] } : {}}
               transition={isCurrent ? { duration: 1.2, repeat: Infinity } : {}}

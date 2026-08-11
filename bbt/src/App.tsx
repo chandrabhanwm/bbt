@@ -150,12 +150,13 @@ function AppInner({ currentUid }: { currentUid: string }) {
     // own definition of a business, not something a player's actions
     // produce — they should always reflect the latest data, the same
     // way a district's own name always does. Without this, a rebrand
-    // (like Basti → CoralBay) would permanently freeze an existing
-    // save's business names at whatever they were the moment that
-    // player first saved, since the raw object-spread merge below
-    // otherwise lets old saved data silently override new definitions
-    // forever. Real progress (level, cost, status) still comes from
-    // the save, exactly as before — only the definition fields refresh.
+    // (a real example: the app's own name changing between builds)
+    // would permanently freeze an existing save's business names at
+    // whatever they were the moment that player first saved, since
+    // the raw object-spread merge below otherwise lets old saved data
+    // silently override new definitions forever. Real progress
+    // (level, cost, status) still comes from the save, exactly as
+    // before — only the definition fields refresh.
     const refreshCosmeticFields = (savedBusinesses: Business[], seededBusinesses: Business[]): Business[] =>
       savedBusinesses.map((saved) => {
         const fresh = seededBusinesses.find((b) => b.id === saved.id);
@@ -640,7 +641,7 @@ function AppInner({ currentUid }: { currentUid: string }) {
     triggerMoneyFlight();
     setMilestone({
       icon: '🎉',
-      title: 'Welcome to CoralBay!',
+      title: 'Welcome to Basti!',
       message: 'Your business empire starts now.',
       bonusText: '+₹25,000 signup bonus',
       color: 'gold',
@@ -822,7 +823,7 @@ function AppInner({ currentUid }: { currentUid: string }) {
       setMilestone({
         icon: current.icon,
         title: `${current.icon} ${current.name}`,
-        message: `You've reached ${totalLevelSum} total business levels across CoralBay.`,
+        message: `You've reached ${totalLevelSum} total business levels across Basti.`,
         bonusText: current.threshold === 480 ? 'Every business, fully mastered.' : 'A new prestige badge, unlocked.',
         color: 'gold',
       });
@@ -1073,7 +1074,7 @@ function AppInner({ currentUid }: { currentUid: string }) {
         <div className="flex items-center gap-2 text-cyan-700">
           <Landmark className="animate-spin" style={{ animationDuration: '10s' }} />
           <h1 className="font-display font-extrabold text-xl text-cyan-100 tracking-tight uppercase">
-            CoralBay Business
+            Basti Business
           </h1>
         </div>
         <p className="text-xs text-cyan-200 leading-relaxed font-semibold">

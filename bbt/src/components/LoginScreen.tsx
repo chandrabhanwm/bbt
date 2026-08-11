@@ -48,7 +48,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onSignedIn, initialErr
       >
         <div className="text-5xl mb-4">🏙️</div>
         <h1 className="font-bold text-[22px] mb-1.5" style={{ color: 'var(--color-premium-text)' }}>
-          CoralBay Business Tycoon
+          Basti Business Tycoon
         </h1>
         <p className="text-[12px] leading-relaxed mb-8 max-w-[280px]" style={{ color: 'var(--color-premium-text-secondary)' }}>
           Sign in to build your empire — your progress is saved to your account and follows you to any device.

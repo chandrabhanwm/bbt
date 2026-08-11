@@ -104,7 +104,7 @@ export const CityMapScreen: React.FC<CityMapScreenProps> = ({ onOpenDistrict, on
         // low-opacity tints was never going to read as "colorful,"
         // no matter how the tints were tuned. This breaks from the
         // app's dark theme deliberately, scoped to just this screen —
-        // a warm coastal sky, fitting CoralBay's own theme, with bold
+        // a warm coastal sky, fitting Basti's own theme, with bold
         // saturated terrain patches rather than translucent hints of
         // color.
         background: `

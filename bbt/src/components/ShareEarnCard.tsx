@@ -40,7 +40,7 @@ export const ShareEarnCard: React.FC<ShareEarnCardProps> = ({ referrerUid, bonus
   const referralLink = `${window.location.origin}?ref=${referrerUid}`;
   // Coins are an in-game currency, not real money — the ₹ symbol implies
   // real rupees and overstates what's actually being offered.
-  const shareMessage = `Join me on CoralBay Business Tycoon! We both get ${bonusCoins.toLocaleString('en-IN')} coins when you sign up: ${referralLink}`;
+  const shareMessage = `Join me on Basti Business Tycoon! We both get ${bonusCoins.toLocaleString('en-IN')} coins when you sign up: ${referralLink}`;
 
   const handleWhatsAppShare = () => {
     playClick();

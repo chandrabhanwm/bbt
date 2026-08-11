@@ -4,7 +4,7 @@ import React from 'react';
  * The one coin icon used everywhere cash appears — header, cards, bubbles,
  * buttons. Every top idle/tycoon game (Idle Miner Tycoon, AdVenture
  * Capitalist, Coin Master) repeats a single currency glyph rather than
- * mixing icon styles per screen; this is that glyph for CoralBay.
+ * mixing icon styles per screen; this is that glyph for Basti.
  *
  * `premium`: opt-in variant consuming the premium design system's gold
  * tokens, used only by the new Home Screen components. Default rendering

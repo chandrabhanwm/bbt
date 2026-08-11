@@ -41,13 +41,13 @@ export const SimulatedAdModal: React.FC<SimulatedAdModalProps> = ({ isOpen, coun
                 <span className="text-4xl">⚡️</span>
               </div>
             </motion.div>
-            <h2 className="font-bold text-lg text-white uppercase tracking-wide">Become the CoralBay Kingpin!</h2>
+            <h2 className="font-bold text-lg text-white uppercase tracking-wide">Become the Basti Kingpin!</h2>
             <div className="w-48 h-1.5 bg-slate-800 rounded-full mt-6 overflow-hidden">
               <motion.div className="h-full bg-gradient-to-r from-amber-400 to-yellow-300 rounded-full" initial={{ width: '0%' }} animate={{ width: '100%' }} transition={{ duration: 6, ease: 'linear' }} />
             </div>
           </div>
           <div className="p-4 bg-gradient-to-t from-black/80 to-transparent text-center relative z-10">
-            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Thank you for supporting CoralBay Business Tycoon!</span>
+            <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Thank you for supporting Basti Business Tycoon!</span>
           </div>
         </motion.div>
       </div>

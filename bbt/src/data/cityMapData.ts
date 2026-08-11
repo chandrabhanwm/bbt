@@ -86,7 +86,7 @@ const districts: District[] = [
   { id: 'company_bagh', name: 'Tidewater Gardens', icon: 'trees', emoji: '🌳', x: 210, y: 660, unlocked: false, completed: false, description: 'A leafy park district built for families, food, and weekend leisure.', unlockRequirement: { type: 'district_completed', districtId: 'court_area', label: 'Complete Anchor Court' } },
   { id: 'court_area', name: 'Anchor Court', icon: 'landmark', emoji: '⚖️', x: 60, y: 810, unlocked: false, completed: false, description: 'Where the city\'s legal business gets done, one photocopy at a time.', unlockRequirement: { type: 'district_completed', districtId: 'katra', label: 'Complete Reef Bazaar' } },
   { id: 'katra', name: 'Reef Bazaar', icon: 'shopping-bag', emoji: '🏘️', x: 210, y: 810, unlocked: false, completed: false, description: 'A wholesale hub — fresh produce, textiles, and the shops that supply the rest of the city.', unlockRequirement: { type: 'district_completed', districtId: 'badeban', label: 'Complete Palm Ganj' } },
-  { id: 'badeban', name: 'Palm Ganj', icon: 'flag', emoji: '🏁', x: 360, y: 810, unlocked: true, completed: false, description: 'The entry market where every CoralBay business empire begins.', unlockRequirement: { type: 'always', label: 'Starting district' } },
+  { id: 'badeban', name: 'Palm Ganj', icon: 'flag', emoji: '🏁', x: 360, y: 810, unlocked: true, completed: false, description: 'The entry market where every Basti business empire begins.', unlockRequirement: { type: 'always', label: 'Starting district' } },
 ];
 
 const roads: Road[] = [
@@ -105,7 +105,7 @@ const roads: Road[] = [
 
 export const bastiCity: City = {
   id: 'basti',
-  name: 'CoralBay',
+  name: 'Basti',
   districts,
   roads,
 };

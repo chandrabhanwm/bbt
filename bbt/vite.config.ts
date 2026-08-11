@@ -16,9 +16,9 @@ export default defineConfig(() => {
         // cached version of the JS and silently undoing real bug fixes.
         registerType: 'autoUpdate',
         manifest: {
-          name: 'CoralBay Business Tycoon',
-          short_name: 'CoralBay Tycoon',
-          description: 'Become the richest businessman in CoralBay.',
+          name: 'Basti Business Tycoon',
+          short_name: 'Basti Tycoon',
+          description: 'Become the richest businessman in Basti.',
           start_url: '/',
           display: 'standalone',
           background_color: '#1a130e',

@@ -54,7 +54,7 @@ export const PrivacyPolicyScreen: React.FC<PrivacyPolicyScreenProps> = ({ isOpen
                 This is a test build
               </div>
               <p className="text-[11.5px] leading-relaxed" style={{ color: 'var(--color-premium-text)' }}>
-                CoralBay Business Tycoon is currently in active testing, not a finished public release. Features,
+                Basti Business Tycoon is currently in active testing, not a finished public release. Features,
                 balance, and data structures may change without notice, and account data may be reset or removed
                 at any point during this phase. Please don't use an account you'd rather keep separate from testing.
               </p>

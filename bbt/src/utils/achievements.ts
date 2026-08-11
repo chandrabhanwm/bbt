@@ -95,7 +95,7 @@ export function computeAchievements(stats: PlayerStats, businessesByDistrict: Re
     });
   });
 
-  // 3 cumulative net-worth tiers (replaces the old single "CoralBay Crorepati")
+  // 3 cumulative net-worth tiers (replaces the old single "Basti Crorepati")
   NET_WORTH_TIERS.forEach(({ amount, label }) => {
     achievements.push({
       id: `net_worth_${amount}`,

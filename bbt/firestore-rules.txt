@@ -1,0 +1,127 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─────────────────────────────────────────────────────────────
+    // saves/{uid} — the full, private game save. Only the owning
+    // player can ever read or write their own save; no one else has
+    // any access at all, since this contains their exact business
+    // layout, not just summary numbers.
+    //
+    // Deep validation of the nested businessesByDistrict structure
+    // (looping over every district's array to check each business's
+    // level) isn't practical to express in the rules language itself
+    // — that's exactly the kind of check a Cloud Function is actually
+    // suited for, not a rule. What IS checked here are the top-level
+    // scalar fields, with ceilings set well above anything reachable
+    // in real play (see the leaderboard rules below for where the
+    // real, tight limits live, since those fields are flat and can
+    // actually be checked directly).
+    // ─────────────────────────────────────────────────────────────
+    match /saves/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if request.auth != null
+                   && request.auth.uid == uid
+                   && request.resource.data.stats.cash is number
+                   && request.resource.data.stats.cash >= 0
+                   && request.resource.data.stats.cash < 1000000000000  // ₹1,00,000 Cr — generously above any real accumulation, catches obvious tampering (e.g. setting cash to 9 quintillion) without risking false positives on a genuinely dedicated player
+                   && request.resource.data.stats.profitPerMin is number
+                   && request.resource.data.stats.profitPerMin >= 0
+                   && request.resource.data.stats.profitPerMin < 100000000  // ₹10 Cr/min — the real, simulated maximum at 100% game completion is ~₹1.03 Cr/min, this ceiling leaves generous headroom above that while still catching absurd values
+                   && request.resource.data.stats.currentStreak is number
+                   && request.resource.data.stats.currentStreak >= 0;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // leaderboard/{uid} — deliberately public within the app: every
+    // signed-in player can read the whole collection (that's the
+    // entire point of a leaderboard), but a player can only ever
+    // write their own entry.
+    //
+    // This is where the strongest checks live, since every field
+    // here is a flat scalar the rules language can validate directly
+    // — including hard ceilings taken from the game's own proven
+    // mathematics (see prestigeBadges.ts and the strategy-layer
+    // pacing simulations this session), not arbitrary guesses:
+    //   - totalLevelSum: 0 to 480 is the actual, provable range —
+    //     80 businesses × 6 max levels each, no more is possible.
+    //   - distinctBusinessesOwned: 0 to 80 — there are exactly 80
+    //     businesses in the entire game, never more.
+    //   - level (player XP level): 1 to 10 — a hard mathematical
+    //     ceiling discovered this session: XP only comes from
+    //     buy/upgrade actions, and the game has a genuinely finite
+    //     total of those, capping the maximum achievable level at
+    //     10 even at literal 100% completion. Level 11 is not just
+    //     unlikely, it is impossible in real play.
+    //   - Monotonic checks: totalLevelSum, distinctBusinessesOwned,
+    //     and businessesBoughtCount can only ever increase in
+    //     legitimate play, since businesses are never sold or
+    //     downgraded in this game — a write that decreases any of
+    //     these is rejected outright, not just flagged.
+    // ─────────────────────────────────────────────────────────────
+    match /leaderboard/{uid} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+                   && request.auth.uid == uid
+                   && request.resource.data.netWorth is number
+                   && request.resource.data.netWorth >= 0
+                   && request.resource.data.netWorth < 1000000000000  // ₹1,00,000 Cr, same generous ceiling as saves.cash
+                   && request.resource.data.profitPerMin is number
+                   && request.resource.data.profitPerMin >= 0
+                   && request.resource.data.profitPerMin < 100000000  // ₹10 Cr/min, same reasoning as saves.profitPerMin
+                   && request.resource.data.distinctBusinessesOwned is number
+                   && request.resource.data.distinctBusinessesOwned >= 0
+                   && request.resource.data.distinctBusinessesOwned <= 80
+                   && request.resource.data.totalLevelSum is number
+                   && request.resource.data.totalLevelSum >= 0
+                   && request.resource.data.totalLevelSum <= 480
+                   && request.resource.data.level is number
+                   && request.resource.data.level >= 1
+                   && request.resource.data.level <= 10
+                   && request.resource.data.weeklyPoints is number
+                   && request.resource.data.weeklyPoints >= 0
+                   && request.resource.data.businessesBoughtCount is number
+                   && request.resource.data.businessesBoughtCount >= 0
+                   // Monotonic — these three can only ever go up in
+                   // legitimate play. Uses .get(field, default) rather
+                   // than a bare field reference specifically because
+                   // totalLevelSum and businessesBoughtCount were only
+                   // added to this schema partway through development —
+                   // any leaderboard document written before that change
+                   // would have no such field at all, and comparing
+                   // against a genuinely missing field would incorrectly
+                   // deny the write for every pre-existing player. The -1
+                   // default makes that comparison always pass instead of
+                   // erroring, exactly once, the first time each old
+                   // document is updated under the new schema.
+                   && (!exists(/databases/$(database)/documents/leaderboard/$(uid))
+                       || (request.resource.data.totalLevelSum >= resource.data.get('totalLevelSum', -1)
+                           && request.resource.data.distinctBusinessesOwned >= resource.data.get('distinctBusinessesOwned', -1)
+                           && request.resource.data.businessesBoughtCount >= resource.data.get('businessesBoughtCount', -1)));
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // sessions/{uid} — ad-watch session tracking. Same simple
+    // ownership rule as everything else: only the player themselves
+    // can read or write their own session record.
+    // ─────────────────────────────────────────────────────────────
+    match /sessions/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // referrals/{newUserUid} — unchanged from the existing rule.
+    // Anyone signed in can create their own referral record (the
+    // "I was referred by this uid" claim) and read the collection to
+    // check referral status, but only the original referrer can ever
+    // mark a referral as claimed, and only that one field — not
+    // rewrite who referred whom after the fact.
+    // ─────────────────────────────────────────────────────────────
+    match /referrals/{newUserUid} {
+      allow create: if request.auth != null && request.auth.uid == newUserUid;
+      allow read: if request.auth != null;
+      allow update: if request.auth != null && request.auth.uid == resource.data.referrerUid
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['claimed']);
+    }
+  }
+}

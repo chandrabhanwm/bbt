@@ -36,7 +36,7 @@ interface HeaderProps {
 }
 
 const AVATAR_OPTIONS = [
-  { emoji: '😎', label: 'CoralBay Bazar Boss' },
+  { emoji: '😎', label: 'Basti Bazar Boss' },
   { emoji: '👳', label: 'Dhaba Sethji' },
   { emoji: '👩', label: 'Saree Queen' },
   { emoji: '☕', label: 'Chaiwala Chotu' },
@@ -318,7 +318,7 @@ export const Header: React.FC<HeaderProps> = ({
               <div className="mt-3 p-3 rounded-xl flex items-center gap-2.5" style={{ backgroundColor: 'var(--color-premium-elevated)' }}>
                 <ShieldAlert size={15} color={GOLD} className="flex-shrink-0" />
                 <span className="text-[11px] leading-snug" style={{ color: TEXT_SECONDARY }}>
-                  Your persona shows up on the CoralBay Rich List for every rival to see.
+                  Your persona shows up on the Basti Rich List for every rival to see.
                 </span>
               </div>
             </motion.div>

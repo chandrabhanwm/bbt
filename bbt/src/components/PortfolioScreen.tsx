@@ -557,7 +557,7 @@ export const PortfolioScreen: React.FC<PortfolioScreenProps> = ({
                   <p className="text-[9.5px] leading-snug mt-1" style={{ color: unlocked ? 'rgba(255,255,255,0.75)' : 'var(--color-premium-text-secondary)' }}>
                     {badge.threshold === 480
                       ? 'Fully master every business in every district.'
-                      : `Reach ${badge.threshold} total business levels across CoralBay.`}
+                      : `Reach ${badge.threshold} total business levels across Basti.`}
                   </p>
                   <div className="w-full h-1.5 rounded-full mt-2 overflow-hidden" style={{ backgroundColor: 'rgba(0,0,0,0.3)' }}>
                     <motion.div
