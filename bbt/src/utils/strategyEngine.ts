@@ -109,7 +109,7 @@ export function computeSynergyAdjustedProfit(districtId: string, businessId: str
   // synergy bonus applied to the preview. Applying it here made a
   // cheaper business with already-owned neighbors show a HIGHER number
   // than a genuinely more valuable business whose own synergy
-  // requirements weren't met yet (e.g. Anchor Grill showing ₹2,691 vs
+  // requirements weren't met yet (e.g. Royal Grill showing ₹2,691 vs
   // Grand Mahal's ₹2,632, despite Grand Mahal being the pricier,
   // higher-ceiling business) — a real, misleading comparison for anyone
   // deciding what to buy next. Once actually owned, a business's income
