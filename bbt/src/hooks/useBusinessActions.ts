@@ -26,6 +26,7 @@ interface UseBusinessActionsParams {
   setMilestone: (m: MilestoneState | null) => void;
   setShowConfetti: (v: boolean) => void;
   setJustUpdatedBusinessId: (updater: string | null | ((prev: string | null) => string | null)) => void;
+  setJustUpdatedNonce: (updater: number | ((prev: number) => number)) => void;
   triggerCashPulse: () => void;
   pushNewsEvent: (message: string) => void;
   playLevelUp: () => void;
@@ -44,7 +45,7 @@ interface UseBusinessActionsParams {
  */
 export function useBusinessActions({
   stats, cashRef, currentDistrictName, currentDistrictId, setBusinesses, setStats, setMilestone,
-  setShowConfetti, setJustUpdatedBusinessId, triggerCashPulse, pushNewsEvent, playLevelUp, triggerContestPointsCelebration,
+  setShowConfetti, setJustUpdatedBusinessId, setJustUpdatedNonce, triggerCashPulse, pushNewsEvent, playLevelUp, triggerContestPointsCelebration,
 }: UseBusinessActionsParams) {
   const triggerXpGain = (xpAmount: number) => {
     setStats((prev) => {
@@ -239,6 +240,7 @@ export function useBusinessActions({
         triggerXpGain(isUnlocking ? 45 : 20);
         triggerCashPulse();
         setJustUpdatedBusinessId(b.id);
+        setJustUpdatedNonce((n) => n + 1);
         setTimeout(() => setJustUpdatedBusinessId((cur) => (cur === b.id ? null : cur)), 700);
         // Contest-points celebration — deliberately delayed so it plays
         // as a distinct, later beat after the existing purchase/upgrade

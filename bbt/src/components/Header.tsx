@@ -207,6 +207,7 @@ export const Header: React.FC<HeaderProps> = ({
              appear once there's something claimable, so it reads as
              actionable rather than purely informational. ============ */}
         <motion.button
+          data-tutorial-target="claim-button"
           whileTap={{ scale: 0.95 }}
           onClick={onClaimPool}
           animate={stats.poolCash > 0 ? { boxShadow: ['0 0 0px rgba(212,167,44,0)', '0 0 14px rgba(212,167,44,0.6)', '0 0 0px rgba(212,167,44,0)'] } : {}}

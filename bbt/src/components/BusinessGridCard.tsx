@@ -24,6 +24,7 @@ interface BusinessGridCardProps {
    *  was bought/upgraded — plays a one-shot celebrate animation, then
    *  clears itself. Never blocks tapping the card again mid-animation. */
   justUpdated?: boolean;
+  justUpdatedNonce?: number;
   /** Player's current cash — used only to determine whether the Buy/
    *  Upgrade badge should glow as affordable right now. */
   cash: number;
@@ -105,7 +106,7 @@ function formatShort(value: number): string {
   return `${value}`;
 }
 
-export const BusinessGridCard: React.FC<BusinessGridCardProps> = ({ business, index, imageUrl, onSelect, justUpdated = false, cash, contestPointsCelebrating = false }) => {
+export const BusinessGridCard: React.FC<BusinessGridCardProps> = ({ business, index, imageUrl, onSelect, justUpdated = false, justUpdatedNonce = 0, cash, contestPointsCelebrating = false }) => {
   const isOwned = business.level > 0;
   const category = getBusinessCategory(business.id);
 
@@ -114,13 +115,23 @@ export const BusinessGridCard: React.FC<BusinessGridCardProps> = ({ business, in
   // reading before everything settles back to normal. Interruptible: if
   // justUpdated fires again before this clears, the effect just restarts
   // the window cleanly.
+  //
+  // justUpdatedNonce is in the dependency array specifically to fix a
+  // real bug: justUpdated alone is just business.id === (some id) — if
+  // the SAME business is upgraded again quickly, that comparison stays
+  // true the whole time with no value change, and React correctly does
+  // not re-run an effect whose dependency didn't change. The result was
+  // only the first upgrade in a fast, back-to-back sequence ever got a
+  // celebration; every rapid upgrade after it silently got none. The
+  // nonce increments on every single trigger, even repeated ones for
+  // the same business, so the effect genuinely re-runs every time.
   const [celebrating, setCelebrating] = useState(false);
   useEffect(() => {
     if (!justUpdated) return;
     setCelebrating(true);
     const t = setTimeout(() => setCelebrating(false), 700);
     return () => clearTimeout(t);
-  }, [justUpdated]);
+  }, [justUpdated, justUpdatedNonce]);
 
   const isMaxLevel = business.maxLevel !== undefined && business.level >= business.maxLevel;
   const levelTier = isMaxLevel ? null : getLevelTierColor(business.level);
@@ -133,6 +144,7 @@ export const BusinessGridCard: React.FC<BusinessGridCardProps> = ({ business, in
   return (
     <motion.button
       ref={cardRef}
+      data-tutorial-target={index === 0 && !isOwned ? 'first-business-card' : undefined}
       whileTap={{ scale: 0.97 }}
       animate={{ scale: celebrating ? [1, 1.03, 1] : 1 }}
       transition={{ duration: 0.18, ease: 'easeOut' }}

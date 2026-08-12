@@ -13,6 +13,7 @@ import { ShareEarnCard } from './components/ShareEarnCard';
 import { RivalCalloutCard } from './components/RivalCalloutCard';
 import { DailyStreakCard } from './components/DailyStreakCard';
 import { StreakWheelModal } from './components/StreakWheelModal';
+import { TutorialSpotlight } from './components/TutorialSpotlight';
 import { BusinessGridView } from './components/BusinessGridView';
 import { FooterTipBar } from './components/FooterTipBar';
 import { ShopDetailSheet } from './components/ShopDetailSheet';
@@ -447,11 +448,34 @@ function AppInner({ currentUid }: { currentUid: string }) {
     icon: string; title: string; message: string; bonusText: string; color: 'gold' | 'green' | 'purple' | 'teal';
   } | null>(null);
   const [showConfetti, setShowConfetti] = useState(false);
+  // Interactive tutorial — a genuinely first-session-only walkthrough,
+  // not persisted across sessions. Given both steps are trivially
+  // completable within a first session (buy one business, dismiss one
+  // explanation), keeping this as simple session state rather than a
+  // saved field avoids real complexity for a case that essentially
+  // never needs to resume days later.
+  const [tutorialStep, setTutorialStep] = useState<'buy_first' | 'claim_pool' | null>(null);
+  // Advances step 1 the moment the real action actually happens — not
+  // a "next" button standing in for it, the genuine purchase itself.
+  useEffect(() => {
+    if (tutorialStep === 'buy_first' && stats.hasMadeFirstPurchase) {
+      setTutorialStep('claim_pool');
+    }
+  }, [tutorialStep, stats.hasMadeFirstPurchase]);
 
   // Micro Feedback pass: which business just got bought/upgraded, so its
   // grid card can play a one-shot celebrate animation. Cleared shortly
   // after so it never re-triggers on a later re-render.
   const [justUpdatedBusinessId, setJustUpdatedBusinessId] = useState<string | null>(null);
+  // Increments on every single trigger, even repeated ones for the
+  // same business — this is the actual fix for a real bug: a player
+  // upgrading the same business twice in quick succession was setting
+  // justUpdatedBusinessId to the identical string both times, which
+  // React correctly treats as "no change" and never re-runs the
+  // celebration effect for. The card's effect keys off this nonce
+  // instead of (or alongside) the id, so a genuinely new trigger fires
+  // every time regardless of whether the business id repeats.
+  const [justUpdatedNonce, setJustUpdatedNonce] = useState(0);
 
   // Cash Pill pulse — a counter bumped only by discrete actions (a
   // purchase, a claim, a reward), never by the continuous per-second
@@ -688,6 +712,10 @@ function AppInner({ currentUid }: { currentUid: string }) {
     if (googleName) setPlayerName(googleName);
     const googlePhoto = auth.currentUser?.photoURL;
     if (googlePhoto) setAvatarEmoji(googlePhoto);
+
+    // Interactive tutorial — starts once the welcome celebration above
+    // has naturally finished, so the two don't visually overlap.
+    setTimeout(() => setTutorialStep('buy_first'), progressionConfig.celebrationDurationMs + 400);
   }, [isBrandNewPlayer]);
 
   // GAME LOOP (Pool ticks every 1 second; cash is frozen until claimed)
@@ -994,7 +1022,7 @@ function AppInner({ currentUid }: { currentUid: string }) {
     currentDistrictName: currentDistrictMeta?.name ?? 'Badeban',
     currentDistrictId,
     setBusinesses, setStats, setMilestone, setShowConfetti,
-    setJustUpdatedBusinessId, triggerCashPulse, pushNewsEvent, playLevelUp,
+    setJustUpdatedBusinessId, setJustUpdatedNonce, triggerCashPulse, pushNewsEvent, playLevelUp,
     triggerContestPointsCelebration,
   });
 
@@ -1294,6 +1322,7 @@ function AppInner({ currentUid }: { currentUid: string }) {
                     onSelectShop={setSelectedShopId}
                     readOnly={isPreviewMode}
                     justUpdatedBusinessId={justUpdatedBusinessId}
+                    justUpdatedNonce={justUpdatedNonce}
                     cash={stats.cash}
                     contestPointsCelebrationId={contestPointsCelebrationId}
                   />
@@ -1657,6 +1686,22 @@ function AppInner({ currentUid }: { currentUid: string }) {
             />
           )}
         </AnimatePresence>
+
+        {tutorialStep === 'buy_first' && (
+          <TutorialSpotlight
+            targetSelector="first-business-card"
+            title="Buy your first business"
+            message="Tap this card to open it and make your very first purchase."
+          />
+        )}
+        {tutorialStep === 'claim_pool' && (
+          <TutorialSpotlight
+            targetSelector="claim-button"
+            title="Collect your income"
+            message="Your businesses earn money over time. Come back here and tap to collect it whenever it builds up."
+            onDismiss={() => setTutorialStep(null)}
+          />
+        )}
 
       </div>
 

@@ -12,6 +12,12 @@ interface BusinessGridViewProps {
   /** Which business (if any) was just bought/upgraded — that one card
    *  plays a brief celebrate animation, everything else is unaffected. */
   justUpdatedBusinessId?: string | null;
+  /** Increments on every real trigger, even repeated ones for the same
+   *  business — see App.tsx's justUpdatedNonce comment for the full
+   *  reasoning. Passed through so the card's celebration effect can
+   *  key off a genuinely new value each time, not just the business id
+   *  (which can repeat on rapid successive upgrades). */
+  justUpdatedNonce?: number;
   /** Player's current cash — passed through to each card so its Buy/
    *  Upgrade badge can glow when currently affordable. */
   cash: number;
@@ -27,7 +33,7 @@ interface BusinessGridViewProps {
  * about buy/upgrade/collect logic lives here; tapping a card just calls
  * onSelectShop(id), identical to tapping a shop in the street view.
  */
-export const BusinessGridView: React.FC<BusinessGridViewProps> = ({ businesses, onSelectShop, imageUrls, readOnly = false, justUpdatedBusinessId = null, cash, contestPointsCelebrationId = null }) => {
+export const BusinessGridView: React.FC<BusinessGridViewProps> = ({ businesses, onSelectShop, imageUrls, readOnly = false, justUpdatedBusinessId = null, justUpdatedNonce = 0, cash, contestPointsCelebrationId = null }) => {
   return (
     <div className="grid grid-cols-2 gap-3 items-start auto-rows-min pb-2">
       {businesses.map((business, index) => (
@@ -38,6 +44,7 @@ export const BusinessGridView: React.FC<BusinessGridViewProps> = ({ businesses, 
           imageUrl={imageUrls?.[business.id]}
           onSelect={readOnly ? () => {} : onSelectShop}
           justUpdated={business.id === justUpdatedBusinessId}
+          justUpdatedNonce={justUpdatedNonce}
           cash={cash}
           contestPointsCelebrating={business.id === contestPointsCelebrationId}
         />
