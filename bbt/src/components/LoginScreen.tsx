@@ -83,19 +83,56 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onSignedIn, initialErr
         className="relative flex flex-col items-center"
       >
         {/* The one hero moment — bigger, quieter, more confident than a
-            flashy entrance. A slow, subtle breathing scale instead of
-            a crash-and-settle, since restraint is the point. */}
-        <motion.div
-          className="relative w-28 h-28 rounded-[26px] flex items-center justify-center text-6xl mb-6"
-          style={{
-            background: 'linear-gradient(160deg, #E8C766 0%, #D4AF37 50%, #8A6F1F 100%)',
-            boxShadow: '0 24px 48px rgba(0,0,0,0.6), 0 0 50px rgba(212,175,55,0.3), inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -3px 0 rgba(0,0,0,0.3)',
-          }}
-          animate={{ scale: [1, 1.02, 1] }}
-          transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-        >
-          🏙️
-        </motion.div>
+            flashy entrance. Real 3D perspective on entry (a genuine
+            tilt-and-settle, not a flat scale), then a slow, subtle 3D
+            wobble at rest — the logo reads as a physical object with
+            actual depth, not a flat gold square with a picture on it. */}
+        <div style={{ perspective: 380 }}>
+          <motion.div
+            className="relative w-28 h-28 rounded-[26px] flex items-center justify-center text-6xl mb-6"
+            style={{
+              background: 'linear-gradient(160deg, #E8C766 0%, #D4AF37 50%, #8A6F1F 100%)',
+              boxShadow: '0 24px 48px rgba(0,0,0,0.6), 0 0 50px rgba(212,175,55,0.3), inset 0 2px 0 rgba(255,255,255,0.5), inset 0 -3px 0 rgba(0,0,0,0.3)',
+              transformStyle: 'preserve-3d',
+            }}
+            initial={{ rotateX: 60, rotateY: -38, scale: 0.9 }}
+            animate={{ rotateX: [60, -8, 0, 6, 0], rotateY: [-38, 10, 0, -8, 0], scale: 1 }}
+            transition={{
+              rotateX: { duration: 0.9, times: [0, 0.55, 0.7, 0.85, 1], ease: 'easeOut' },
+              rotateY: { duration: 0.9, times: [0, 0.55, 0.7, 0.85, 1], ease: 'easeOut' },
+              scale: { duration: 0.6, ease: 'easeOut' },
+            }}
+          >
+            <svg width="60" height="60" viewBox="0 0 60 60" style={{ filter: 'drop-shadow(0 3px 4px rgba(0,0,0,0.35))' }}>
+              <defs>
+                <linearGradient id="bldg-dark" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#2A2210" />
+                  <stop offset="100%" stopColor="#14100A" />
+                </linearGradient>
+              </defs>
+              {/* A deliberately composed skyline — tallest tower centered,
+                  stepped shoulders either side, not a random assortment
+                  of rectangles. Rendered in a deep, near-black gradient
+                  so it reads as a confident dark silhouette against the
+                  gold field, the same "restraint" principle as the rest
+                  of this screen. */}
+              <rect x="4"  y="30" width="8"  height="24" fill="url(#bldg-dark)" />
+              <rect x="14" y="20" width="9"  height="34" fill="url(#bldg-dark)" />
+              <rect x="25" y="8"  width="10" height="46" fill="url(#bldg-dark)" />
+              <rect x="37" y="22" width="9"  height="32" fill="url(#bldg-dark)" />
+              <rect x="48" y="32" width="8"  height="22" fill="url(#bldg-dark)" />
+              {/* Lit windows — small gold rectangles, the one detail that
+                  makes this read as designed rather than a flat cutout,
+                  and ties the mark's palette back to the gold field it
+                  sits on. */}
+              {[[6,35],[6,41],[6,47],[16,25],[16,31],[16,37],[16,43],[16,49],
+                [28,13],[28,19],[28,25],[28,31],[28,37],[28,43],[28,49],
+              [39,27],[39,33],[39,39],[39,45],[50,37],[50,43],[50,49]].map(([x,y], i) => (
+              <rect key={i} x={x} y={y} width="3" height="3.5" fill="#D4AF37" opacity="0.85" />
+            ))}
+          </svg>
+          </motion.div>
+        </div>
 
         <h1
           className="font-black text-[28px] mb-2 tracking-tight uppercase"
