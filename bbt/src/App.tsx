@@ -455,6 +455,7 @@ function AppInner({ currentUid }: { currentUid: string }) {
   // saved field avoids real complexity for a case that essentially
   // never needs to resume days later.
   const [tutorialStep, setTutorialStep] = useState<'buy_first' | 'claim_pool' | null>(null);
+  const [tutorialPending, setTutorialPending] = useState(false);
   // Advances step 1 the moment the real action actually happens — not
   // a "next" button standing in for it, the genuine purchase itself.
   useEffect(() => {
@@ -713,10 +714,30 @@ function AppInner({ currentUid }: { currentUid: string }) {
     const googlePhoto = auth.currentUser?.photoURL;
     if (googlePhoto) setAvatarEmoji(googlePhoto);
 
-    // Interactive tutorial — starts once the welcome celebration above
-    // has naturally finished, so the two don't visually overlap.
-    setTimeout(() => setTutorialStep('buy_first'), progressionConfig.celebrationDurationMs + 400);
+    // Interactive tutorial — marked pending here, but NOT started with
+    // a fixed timer. A brand-new player's very first session also
+    // always triggers Day 1 of their login streak (see
+    // processStreakLogin — a fresh account has nothing to compare
+    // against, so it's always "day 1, advanced"), which independently
+    // shows the Streak Wheel popup. A timer keyed only off the welcome
+    // celebration's own duration had no awareness that the wheel could
+    // still be up, so the two would visibly overlap. The actual start
+    // is handled by a separate effect below that waits for every
+    // opening overlay to be genuinely closed first.
+    setTutorialPending(true);
   }, [isBrandNewPlayer]);
+
+  // Starts the tutorial only once every other first-session overlay
+  // (the welcome celebration, the streak wheel) has actually closed —
+  // reactive to their real state, not a guessed fixed delay. Runs
+  // every time any of these three values changes, so it fires the
+  // instant the last blocking overlay clears, whichever one that is.
+  useEffect(() => {
+    if (!tutorialPending) return;
+    if (milestone || streakWheelState) return; // something is still up — wait
+    setTutorialPending(false);
+    setTutorialStep('buy_first');
+  }, [tutorialPending, milestone, streakWheelState]);
 
   // GAME LOOP (Pool ticks every 1 second; cash is frozen until claimed)
   useEffect(() => {
