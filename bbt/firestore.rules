@@ -29,7 +29,17 @@ service cloud.firestore {
                    && request.resource.data.stats.profitPerMin >= 0
                    && request.resource.data.stats.profitPerMin < 100000000  // ₹10 Cr/min — the real, simulated maximum at 100% game completion is ~₹1.03 Cr/min, this ceiling leaves generous headroom above that while still catching absurd values
                    && request.resource.data.stats.currentStreak is number
-                   && request.resource.data.stats.currentStreak >= 0;
+                   && request.resource.data.stats.currentStreak >= 0
+                   // Added after the pre-launch audit found this field
+                   // completely unvalidated on the document players
+                   // write most often (saves, not leaderboard). Same
+                   // rigorously-computed ceiling as the leaderboard
+                   // rule below — the real absolute theoretical max in
+                   // one week, every lifetime action compressed into
+                   // 7 days, comes in under 15,000.
+                   && request.resource.data.stats.weeklyPoints is number
+                   && request.resource.data.stats.weeklyPoints >= 0
+                   && request.resource.data.stats.weeklyPoints <= 50000;
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -80,8 +90,27 @@ service cloud.firestore {
                    && request.resource.data.level <= 10
                    && request.resource.data.weeklyPoints is number
                    && request.resource.data.weeklyPoints >= 0
+                   // Ceiling added after the pre-launch audit found this
+                   // field completely unbounded — a direct write could
+                   // previously set any value and win the contest
+                   // outright. 50,000 is deliberately generous: even an
+                   // extreme week (every possible buy/upgrade/synergy
+                   // action across the whole game, plus max daily
+                   // claims/scratches/referrals for 7 straight days)
+                   // comes in under 15,000 by direct calculation, so
+                   // this catches obvious tampering without risking a
+                   // false positive on genuinely elite play.
+                   && request.resource.data.weeklyPoints <= 50000
+                   && request.resource.data.contestWeekId is string
                    && request.resource.data.businessesBoughtCount is number
                    && request.resource.data.businessesBoughtCount >= 0
+                   // Verified ceiling: this field increments on every
+                   // buy AND every upgrade action (not just distinct
+                   // purchases, despite the name) — 80 businesses × (1
+                   // buy + 5 upgrades) = 480 is the real, provable
+                   // maximum, the same total-action budget the XP/level
+                   // ceiling above is independently derived from.
+                   && request.resource.data.businessesBoughtCount <= 480
                    // Monotonic — these three can only ever go up in
                    // legitimate play. Uses .get(field, default) rather
                    // than a bare field reference specifically because
@@ -117,11 +146,26 @@ service cloud.firestore {
     // mark a referral as claimed, and only that one field — not
     // rewrite who referred whom after the fact.
     // ─────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────
+    // referrals/{newUserUid} — create/read unchanged. The update rule
+    // was fixed after the pre-launch audit found a real exploit: the
+    // original rule only restricted WHICH field could change (claimed
+    // only), not the DIRECTION of the change. Since the app's own
+    // polling logic (fetchUnclaimedReferrals) re-credits any referral
+    // it finds with claimed == false, a referrer could toggle their
+    // own already-rewarded referral back to false via a direct write
+    // and have it silently re-credited on the next poll — repeatable
+    // indefinitely. The fix: only the one legitimate transition
+    // (false -> true) is allowed; once claimed, it can never be
+    // un-claimed again by anyone.
+    // ─────────────────────────────────────────────────────────────
     match /referrals/{newUserUid} {
       allow create: if request.auth != null && request.auth.uid == newUserUid;
       allow read: if request.auth != null;
       allow update: if request.auth != null && request.auth.uid == resource.data.referrerUid
-                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['claimed']);
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['claimed'])
+                    && resource.data.claimed == false
+                    && request.resource.data.claimed == true;
     }
   }
 }

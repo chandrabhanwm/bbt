@@ -144,7 +144,6 @@ export const BusinessGridCard: React.FC<BusinessGridCardProps> = ({ business, in
   return (
     <motion.button
       ref={cardRef}
-      data-tutorial-target={index === 0 && !isOwned ? 'first-business-card' : undefined}
       whileTap={{ scale: 0.97 }}
       animate={{ scale: celebrating ? [1, 1.03, 1] : 1 }}
       transition={{ duration: 0.18, ease: 'easeOut' }}

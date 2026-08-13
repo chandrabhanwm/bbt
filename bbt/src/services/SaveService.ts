@@ -70,6 +70,15 @@ export interface LeaderboardEntry {
    *  the first time a player opens the app in a new week. See
    *  useWeeklyContest for the actual scoring logic. */
   weeklyPoints: number;
+  /** Which contest week this weeklyPoints value actually belongs to —
+   *  see getContestWeekId() in weeklyContest.ts. Written alongside
+   *  weeklyPoints on every sync specifically so the weekly leaderboard
+   *  query can filter to the current week only, rather than sorting
+   *  the entire collection with no isolation between weeks — a real
+   *  gap found in the pre-launch audit: a player who doesn't open the
+   *  app stayed visible on the "current" leaderboard with stale,
+   *  previous-week points indefinitely. */
+  contestWeekId: string;
   /** The remaining fields below are the per-player analytics set
    *  requested directly — viewable as a clean table in the Firestore
    *  console (or the Cloud Console's table view), rather than relying
@@ -276,9 +285,15 @@ export const SaveService = {
 
   /** Same pattern as fetchTopLeaderboard, ordered by this week's contest
    *  points instead of net worth. */
-  async fetchTopWeeklyContest(limitCount: number = 20): Promise<Array<LeaderboardEntry & { uid: string }>> {
+  /** Filters to the current contest week specifically — the actual
+   *  fix for a real gap found in the pre-launch audit: without this
+   *  filter, a player who simply hadn't opened the app yet this week
+   *  stayed visible on the "current" leaderboard with stale points
+   *  from whenever they last played, since nothing forced their reset
+   *  except their own client noticing the week had changed. */
+  async fetchTopWeeklyContest(contestWeekId: string, limitCount: number = 20): Promise<Array<LeaderboardEntry & { uid: string }>> {
     try {
-      const q = query(collection(db, 'leaderboard'), orderBy('weeklyPoints', 'desc'), limit(limitCount));
+      const q = query(collection(db, 'leaderboard'), where('contestWeekId', '==', contestWeekId), orderBy('weeklyPoints', 'desc'), limit(limitCount));
       const snap = await getDocs(q);
       return snap.docs.map((d) => ({ uid: d.id, ...(d.data() as LeaderboardEntry) }));
     } catch {
@@ -286,10 +301,11 @@ export const SaveService = {
     }
   },
 
-  /** Same pattern as fetchMyRank, for weekly contest points. */
-  async fetchMyWeeklyRank(myWeeklyPoints: number): Promise<number | null> {
+  /** Same pattern as fetchMyRank, for weekly contest points — also
+   *  filtered to the current contest week, same reasoning as above. */
+  async fetchMyWeeklyRank(contestWeekId: string, myWeeklyPoints: number): Promise<number | null> {
     try {
-      const q = query(collection(db, 'leaderboard'), where('weeklyPoints', '>', myWeeklyPoints));
+      const q = query(collection(db, 'leaderboard'), where('contestWeekId', '==', contestWeekId), where('weeklyPoints', '>', myWeeklyPoints));
       const snap = await getCountFromServer(q);
       return snap.data().count + 1;
     } catch {

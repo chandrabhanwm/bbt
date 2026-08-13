@@ -7,6 +7,7 @@ import { progressionConfig } from '../config/progressionConfig';
 import { formatCash } from '../utils/formatCash';
 
 interface DistrictSummaryCardProps {
+  districtId: string;
   districtEmoji: string;
   districtName: string;
   /** Real district photography, supplied later. */
@@ -38,6 +39,7 @@ const TEXT_SECONDARY = 'var(--color-premium-text-secondary)';
  * rather than inventing a new calculation.
  */
 export const DistrictSummaryCard: React.FC<DistrictSummaryCardProps> = React.memo(({
+  districtId,
   districtEmoji,
   districtName,
   bannerImageUrl,
@@ -110,7 +112,7 @@ export const DistrictSummaryCard: React.FC<DistrictSummaryCardProps> = React.mem
           miscalculated on that engine. */}
       <div className="relative rounded-t-2xl overflow-hidden">
         <div className="absolute inset-0">
-          <DistrictHeroBanner imageUrl={bannerImageUrl} />
+          <DistrictHeroBanner districtId={districtId} imageUrl={bannerImageUrl} />
         </div>
 
         <div className="relative px-3 pt-4 pb-3">

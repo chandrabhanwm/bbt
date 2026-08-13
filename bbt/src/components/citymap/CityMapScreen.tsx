@@ -78,8 +78,6 @@ export const CityMapScreen: React.FC<CityMapScreenProps> = ({ onOpenDistrict, on
   const viewBox = `${minX} ${minY} ${maxX - minX} ${maxY - minY}`;
 
   const handleSelect = (district: District) => {
-    // eslint-disable-next-line no-console
-    console.log(`Open District: ${district.name}`);
     setSelected(district);
   };
 

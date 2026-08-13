@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Lock, ShoppingCart, ArrowUpCircle, X, Sparkles } from 'lucide-react';
 import { Business } from '../types';
 import { playClick, playUpgrade, playUnlock, playError } from '../utils/audio';
 import { BusinessPhoto, BusinessIcon } from './BusinessPhoto';
 import { CoinIcon } from './CoinIcon';
-import { CoinBurst } from './FX';
+import { ParticleBurst } from './ParticleBurst';
 import { calculateTieredProfit } from '../utils/profitCurve';
 import { districtUsesStrategyLayer, getActiveSynergiesFor, getSynergiesUnlockedByOwning, getSynergiesGrantedBy, getNextLevelCost, getBaseIncomeAtLevel, getDisplayLevelLabel } from '../utils/strategyEngine';
 
@@ -38,6 +38,7 @@ interface ShopDetailSheetProps {
 export const ShopDetailSheet: React.FC<ShopDetailSheetProps> = ({ business, index, cash, onUpgrade, onClose, readOnly = false, districtId, districtBusinesses }) => {
   const [showBurst, setShowBurst] = useState(false);
   const [justBought, setJustBought] = useState(false);
+  const photoRef = useRef<HTMLDivElement>(null);
 
   if (!business) return null;
 
@@ -66,11 +67,23 @@ export const ShopDetailSheet: React.FC<ShopDetailSheetProps> = ({ business, inde
     setJustBought(true);
     // Let the player see the coin burst + updated level for a beat, then
     // close the sheet automatically — "tap, see it happen, move on."
+    //
+    // This delay was 550ms, and that was the real bug behind upgrades
+    // feeling like they had no animation on real devices: ParticleBurst's
+    // own particles are designed to live roughly 900-1500ms (55-90
+    // frames at 60fps), but the moment onClose() fires, the parent sets
+    // business back to null, and this component's `if (!business) return
+    // null` guard immediately removes the entire render tree — including
+    // the in-flight, still-mostly-opaque particle burst — well before it
+    // ever got to play out or fade. Every single upgrade was cutting its
+    // own celebration off mid-flight, not failing to show one. Lengthened
+    // to let the burst actually be seen before the sheet — and the burst
+    // with it — goes away.
     setTimeout(() => {
       onClose();
       setShowBurst(false);
       setJustBought(false);
-    }, 550);
+    }, 950);
   };
 
   return (
@@ -115,7 +128,7 @@ export const ShopDetailSheet: React.FC<ShopDetailSheetProps> = ({ business, inde
                 the grid cards, so a business shows a real photo once one
                 exists at public/assets/business-photos/{id}.jpg (or
                 .jpeg/.png/.webp), and the same nice fallback otherwise. */}
-            <div className="relative w-full h-[150px] rounded-2xl overflow-hidden mb-3">
+            <div ref={photoRef} className="relative w-full h-[150px] rounded-2xl overflow-hidden mb-3">
               <BusinessPhoto
                 business={business}
                 fallback={
@@ -123,11 +136,11 @@ export const ShopDetailSheet: React.FC<ShopDetailSheetProps> = ({ business, inde
                     className={`w-full h-full flex items-center justify-center ${isLocked ? 'opacity-40 grayscale' : ''}`}
                     style={{ background: `linear-gradient(135deg, ${business.themeColor}66, var(--color-premium-elevated))` }}
                   >
-                    {showBurst && <CoinBurst />}
                     <BusinessIcon business={business} className="w-20 h-20 object-contain" emojiClassName="text-6xl" />
                   </div>
                 }
               />
+              {showBurst && <ParticleBurst anchorRef={photoRef} accentHex="#D4A72C" count={45} stageMultiplier={2.6} />}
               <div
                 className="absolute top-2 left-2 w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs"
                 style={{ backgroundColor: 'var(--color-premium-gold-400)', border: '1.5px solid var(--color-premium-bg)', color: 'var(--color-premium-text-inverse)' }}

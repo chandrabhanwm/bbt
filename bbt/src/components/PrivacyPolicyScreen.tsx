@@ -23,8 +23,8 @@ const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title
  * "Privacy Policy" row in Settings previously did nothing at all when
  * tapped. Written in plain language describing exactly what this app
  * actually does with data, not a formal legal document reviewed by
- * counsel — appropriate for this game's current testing phase, but
- * worth real legal review before any wider, public launch.
+ * counsel — worth real legal review as the player base grows, but
+ * accurate and honest as written.
  */
 export const PrivacyPolicyScreen: React.FC<PrivacyPolicyScreenProps> = ({ isOpen, onClose }) => {
   return (
@@ -46,20 +46,6 @@ export const PrivacyPolicyScreen: React.FC<PrivacyPolicyScreenProps> = ({ isOpen
           </div>
 
           <div className="flex-1 overflow-y-auto px-4 py-4">
-            <div
-              className="rounded-2xl p-3.5 mb-5"
-              style={{ backgroundColor: 'var(--color-premium-surface)', border: '1.5px solid var(--color-premium-gold-400)' }}
-            >
-              <div className="font-bold text-[12.5px] mb-1" style={{ color: GOLD }}>
-                This is a test build
-              </div>
-              <p className="text-[11.5px] leading-relaxed" style={{ color: 'var(--color-premium-text)' }}>
-                Basti Business Tycoon is currently in active testing, not a finished public release. Features,
-                balance, and data structures may change without notice, and account data may be reset or removed
-                at any point during this phase. Please don't use an account you'd rather keep separate from testing.
-              </p>
-            </div>
-
             <Section title="What we collect">
               When you sign in with Google, we receive your name, email address, and profile picture from your
               Google account. We also store your in-game progress — cash, businesses owned, achievements, and
@@ -88,14 +74,12 @@ export const PrivacyPolicyScreen: React.FC<PrivacyPolicyScreenProps> = ({ isOpen
             </Section>
 
             <Section title="Your choices">
-              You can sign out at any time from Settings. Since this is a testing phase, if you'd like your
-              account data removed entirely, please reach out directly rather than assuming it happens
-              automatically.
+              You can sign out at any time from Settings. If you'd like your account data removed entirely,
+              please reach out directly rather than assuming it happens automatically.
             </Section>
 
             <p className="text-[10.5px] mt-2 pb-6" style={{ color: TEXT_SECONDARY }}>
-              This is a plain-language description of what this app actually does, written for a testing
-              phase — not a formal legal document. It will be revisited before any wider, public release.
+              This is a plain-language description of what this app actually does, not a formal legal document.
             </p>
           </div>
         </motion.div>

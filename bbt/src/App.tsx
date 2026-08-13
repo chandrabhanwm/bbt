@@ -13,7 +13,7 @@ import { ShareEarnCard } from './components/ShareEarnCard';
 import { RivalCalloutCard } from './components/RivalCalloutCard';
 import { DailyStreakCard } from './components/DailyStreakCard';
 import { StreakWheelModal } from './components/StreakWheelModal';
-import { TutorialSpotlight } from './components/TutorialSpotlight';
+import { TutorialBanner } from './components/TutorialBanner';
 import { BusinessGridView } from './components/BusinessGridView';
 import { FooterTipBar } from './components/FooterTipBar';
 import { ShopDetailSheet } from './components/ShopDetailSheet';
@@ -1287,6 +1287,21 @@ function AppInner({ currentUid }: { currentUid: string }) {
                     </div>
                   ) : (
                     <>
+                      {tutorialStep === 'buy_first' && (
+                        <TutorialBanner
+                          icon="👉"
+                          title="Buy your first business"
+                          message="Tap any business card below to open it and make your first purchase."
+                        />
+                      )}
+                      {tutorialStep === 'claim_pool' && (
+                        <TutorialBanner
+                          icon="💰"
+                          title="Collect your income"
+                          message="Your businesses earn money over time — tap PROFIT up top to collect it once it builds up."
+                          onDismiss={() => setTutorialStep(null)}
+                        />
+                      )}
                       <DailyRewardCards
                         cards={stats.rewardCards}
                         onScratch={handleScratchCard}
@@ -1311,6 +1326,7 @@ function AppInner({ currentUid }: { currentUid: string }) {
                       Reused as-is for both real play and preview; it's already just a
                       read display of getDistrictProgress(), which is safe either way. */}
                   <DistrictSummaryCard
+                    districtId={displayedDistrictMeta?.id ?? ''}
                     districtEmoji={displayedDistrictMeta?.emoji ?? ''}
                     districtName={displayedDistrictMeta?.name ?? 'Unknown District'}
                     income={currentDistrictProgress.income}
@@ -1707,22 +1723,6 @@ function AppInner({ currentUid }: { currentUid: string }) {
             />
           )}
         </AnimatePresence>
-
-        {tutorialStep === 'buy_first' && (
-          <TutorialSpotlight
-            targetSelector="first-business-card"
-            title="Buy your first business"
-            message="Tap this card to open it and make your very first purchase."
-          />
-        )}
-        {tutorialStep === 'claim_pool' && (
-          <TutorialSpotlight
-            targetSelector="claim-button"
-            title="Collect your income"
-            message="Your businesses earn money over time. Come back here and tap to collect it whenever it builds up."
-            onDismiss={() => setTutorialStep(null)}
-          />
-        )}
 
       </div>
 

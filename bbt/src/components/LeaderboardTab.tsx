@@ -4,6 +4,7 @@ import { Users, Store, TrendingUp as UpgradeIcon, Wallet, Gift } from 'lucide-re
 import { LeaderboardEntry } from '../services/SaveService';
 import { formatCash } from '../utils/formatCash';
 import { getCurrentBadge } from '../data/prestigeBadges';
+import { getContestWeekId } from '../utils/weeklyContest';
 import { PlayerAvatar } from './PlayerAvatar';
 import { playClick } from '../utils/audio';
 import { formatCooldownClock } from '../utils/cooldown';
@@ -163,6 +164,7 @@ export const LeaderboardTab: React.FC<LeaderboardTabProps> = ({
           myOwnRowFallback={{
             uid: myUid ?? 'me', playerName, avatarEmoji: playerAvatar, netWorth: playerNetWorth,
             profitPerMin: playerProfitPerMin, level: playerLevel, updatedAt: Date.now(), weeklyPoints: myWeeklyPoints,
+            contestWeekId: getContestWeekId(),
             currentDistrictId: '', totalPlayTimeSeconds: 0, adsWatchedCount: 0, businessesBoughtCount: 0,
             poolClaimsCount: 0, distinctBusinessesOwned: playerDistinctBusinessesOwned, totalLevelSum: playerTotalLevelSum,
           }}

@@ -6,7 +6,7 @@ import { getEmpireTotalInvested, getDistinctBusinessesOwnedCount } from '../util
 import { getTotalLevelSum } from '../data/prestigeBadges';
 import { getPendingReferralUid, clearPendingReferral } from '../utils/referral';
 import { progressionConfig, CURRENT_SAVE_VERSION } from '../config/progressionConfig';
-import { applyContestPoints, todayDateString } from '../utils/weeklyContest';
+import { applyContestPoints, todayDateString, getContestWeekId } from '../utils/weeklyContest';
 
 interface UseCloudSyncParams {
   /** True only for a genuinely fresh device/browser with no local save
@@ -227,6 +227,7 @@ export function useCloudSync(params: UseCloudSyncParams) {
       const netWorth = currentStats.cash + getEmpireTotalInvested(bbd);
       SaveService.updateLeaderboardEntry(uid, {
         playerName: name, avatarEmoji: emoji, netWorth, profitPerMin: currentStats.profitPerMin, level: currentStats.level, updatedAt: Date.now(), weeklyPoints: currentStats.weeklyPoints,
+        contestWeekId: getContestWeekId(),
         currentDistrictId: districtId, totalPlayTimeSeconds: currentStats.totalPlayTimeSeconds, adsWatchedCount: currentStats.adsWatchedCount,
         businessesBoughtCount: currentStats.businessesBoughtCount, poolClaimsCount: currentStats.poolClaimsCount,
         distinctBusinessesOwned: getDistinctBusinessesOwnedCount(bbd),
@@ -234,8 +235,8 @@ export function useCloudSync(params: UseCloudSyncParams) {
       });
       SaveService.fetchTopLeaderboard(20).then(setRealLeaderboard);
       SaveService.fetchMyRank(currentStats.profitPerMin).then(setMyRealRank);
-      SaveService.fetchTopWeeklyContest(20).then(setWeeklyContestBoard);
-      SaveService.fetchMyWeeklyRank(currentStats.weeklyPoints).then(setMyWeeklyRank);
+      SaveService.fetchTopWeeklyContest(getContestWeekId(), 20).then(setWeeklyContestBoard);
+      SaveService.fetchMyWeeklyRank(getContestWeekId(), currentStats.weeklyPoints).then(setMyWeeklyRank);
       setLastLeaderboardFetchAt(Date.now());
     })();
     return () => { cancelled = true; };
@@ -265,6 +266,7 @@ export function useCloudSync(params: UseCloudSyncParams) {
         level: currentStats.level,
         updatedAt: Date.now(),
         weeklyPoints: currentStats.weeklyPoints,
+        contestWeekId: getContestWeekId(),
         currentDistrictId: districtId,
         totalPlayTimeSeconds: currentStats.totalPlayTimeSeconds,
         adsWatchedCount: currentStats.adsWatchedCount,
@@ -290,8 +292,8 @@ export function useCloudSync(params: UseCloudSyncParams) {
       const { businessesByDistrict: bbd, stats: currentStats } = latestSaveDataRef.current;
       SaveService.fetchTopLeaderboard(20).then(setRealLeaderboard);
       SaveService.fetchMyRank(currentStats.profitPerMin).then(setMyRealRank);
-      SaveService.fetchTopWeeklyContest(20).then(setWeeklyContestBoard);
-      SaveService.fetchMyWeeklyRank(currentStats.weeklyPoints).then(setMyWeeklyRank);
+      SaveService.fetchTopWeeklyContest(getContestWeekId(), 20).then(setWeeklyContestBoard);
+      SaveService.fetchMyWeeklyRank(getContestWeekId(), currentStats.weeklyPoints).then(setMyWeeklyRank);
       setLastLeaderboardFetchAt(Date.now());
     }, 900000); // every 15 minutes
 
