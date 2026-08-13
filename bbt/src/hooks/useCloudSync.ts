@@ -25,6 +25,24 @@ async function fetchWithRetry<T>(fn: () => Promise<T | null>, attempts: number =
   return null;
 }
 
+/** Computes the weeklyPoints value that's actually safe to write to the
+ *  leaderboard right now, given the real current week — this is the
+ *  fix for a genuine race condition found in review: the save interval
+ *  (every 2 minutes) and the full weekly rollover reset (only fires
+ *  when the separate, independent 15-minute leaderboard check happens
+ *  to notice the week changed) run on two completely unsynchronized
+ *  timers. Without this check, a save could fire in the several-minute
+ *  gap right after a real week boundary and write last week's
+ *  still-not-yet-reset weeklyPoints paired with this week's fresh
+ *  contestWeekId — exactly the "stale points count toward the new
+ *  week" bug a rewards-bearing contest can't afford. Comparing the
+ *  player's own last-known week against the real current week at the
+ *  moment of the write itself means this can never happen, regardless
+ *  of which of the two independent timers happens to fire first. */
+function safeWeeklyPointsToWrite(stats: PlayerStats): number {
+  return stats.lastSeenContestWeekId === getContestWeekId() ? stats.weeklyPoints : 0;
+}
+
 interface UseCloudSyncParams {
   /** The confirmed, already-resolved uid from App.tsx's own
    *  subscribeToAuthChanges listener — the single reliable source of
@@ -260,7 +278,7 @@ export function useCloudSync(params: UseCloudSyncParams) {
       const { businessesByDistrict: bbd, stats: currentStats, avatarEmoji: emoji, playerName: name, currentDistrictId: districtId } = latestSaveDataRef.current;
       const netWorth = currentStats.cash + getEmpireTotalInvested(bbd);
       SaveService.updateLeaderboardEntry(uid, {
-        playerName: name, avatarEmoji: emoji, netWorth, profitPerMin: currentStats.profitPerMin, level: currentStats.level, updatedAt: Date.now(), weeklyPoints: currentStats.weeklyPoints,
+        playerName: name, avatarEmoji: emoji, netWorth, profitPerMin: currentStats.profitPerMin, level: currentStats.level, updatedAt: Date.now(), weeklyPoints: safeWeeklyPointsToWrite(currentStats),
         contestWeekId: getContestWeekId(),
         currentDistrictId: districtId, totalPlayTimeSeconds: currentStats.totalPlayTimeSeconds, adsWatchedCount: currentStats.adsWatchedCount,
         businessesBoughtCount: currentStats.businessesBoughtCount, poolClaimsCount: currentStats.poolClaimsCount,
@@ -299,7 +317,7 @@ export function useCloudSync(params: UseCloudSyncParams) {
         profitPerMin: currentStats.profitPerMin,
         level: currentStats.level,
         updatedAt: Date.now(),
-        weeklyPoints: currentStats.weeklyPoints,
+        weeklyPoints: safeWeeklyPointsToWrite(currentStats),
         contestWeekId: getContestWeekId(),
         currentDistrictId: districtId,
         totalPlayTimeSeconds: currentStats.totalPlayTimeSeconds,

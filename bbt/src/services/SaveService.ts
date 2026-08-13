@@ -261,7 +261,8 @@ export const SaveService = {
       const q = query(collection(db, 'leaderboard'), orderBy('profitPerMin', 'desc'), limit(limitCount));
       const snap = await getDocs(q);
       return snap.docs.map((d) => ({ uid: d.id, ...(d.data() as LeaderboardEntry) }));
-    } catch {
+    } catch (err) {
+      console.error('fetchTopLeaderboard failed:', err);
       return [];
     }
   },
@@ -278,7 +279,8 @@ export const SaveService = {
       const q = query(collection(db, 'leaderboard'), where('profitPerMin', '>', myProfitPerMin));
       const snap = await getCountFromServer(q);
       return snap.data().count + 1;
-    } catch {
+    } catch (err) {
+      console.error('fetchMyRank failed:', err);
       return null;
     }
   },
@@ -296,7 +298,17 @@ export const SaveService = {
       const q = query(collection(db, 'leaderboard'), where('contestWeekId', '==', contestWeekId), orderBy('weeklyPoints', 'desc'), limit(limitCount));
       const snap = await getDocs(q);
       return snap.docs.map((d) => ({ uid: d.id, ...(d.data() as LeaderboardEntry) }));
-    } catch {
+    } catch (err) {
+      // Logged rather than silently swallowed — this specific query
+      // combines an equality filter (contestWeekId) with an orderBy on
+      // a different field (weeklyPoints), which Firestore requires a
+      // composite index for. If that index was never created in the
+      // console, this fails the exact same way every single time, not
+      // intermittently — which looks identical to "doesn't work no
+      // matter how many times I refresh" from the outside. Firestore's
+      // own error for this case includes a direct link that pre-fills
+      // the exact index needed, visible here instead of nowhere.
+      console.error('fetchTopWeeklyContest failed:', err);
       return [];
     }
   },
@@ -308,7 +320,8 @@ export const SaveService = {
       const q = query(collection(db, 'leaderboard'), where('contestWeekId', '==', contestWeekId), where('weeklyPoints', '>', myWeeklyPoints));
       const snap = await getCountFromServer(q);
       return snap.data().count + 1;
-    } catch {
+    } catch (err) {
+      console.error('fetchMyWeeklyRank failed:', err);
       return null;
     }
   },
