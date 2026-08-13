@@ -8,7 +8,41 @@ import { getPendingReferralUid, clearPendingReferral } from '../utils/referral';
 import { progressionConfig, CURRENT_SAVE_VERSION } from '../config/progressionConfig';
 import { applyContestPoints, todayDateString, getContestWeekId } from '../utils/weeklyContest';
 
+/** Retries a nullable-result fetch a few times with a short delay
+ *  between attempts, specifically for the very first fetch after
+ *  sign-in — this is the one moment a genuine, transient network
+ *  hiccup (a cold Firestore connection, a brief connectivity blip) is
+ *  most likely and most costly, since without a retry the player would
+ *  otherwise wait for the next full 15-minute periodic cycle to see
+ *  their real rank at all. Not used for the recurring periodic
+ *  fetches, which already retry naturally on their own schedule. */
+async function fetchWithRetry<T>(fn: () => Promise<T | null>, attempts: number = 3, delayMs: number = 1500): Promise<T | null> {
+  for (let i = 0; i < attempts; i++) {
+    const result = await fn();
+    if (result !== null) return result;
+    if (i < attempts - 1) await new Promise((r) => setTimeout(r, delayMs));
+  }
+  return null;
+}
+
 interface UseCloudSyncParams {
+  /** The confirmed, already-resolved uid from App.tsx's own
+   *  subscribeToAuthChanges listener — the single reliable source of
+   *  truth for "who is actually signed in right now." Passed in
+   *  explicitly rather than having this hook independently re-read
+   *  auth.currentUser itself, which was a real, reported bug: reading
+   *  the SDK's currentUser property directly, once, inside an effect
+   *  with an empty dependency array meant that if this hook's effect
+   *  happened to run before Firebase's own async session check had
+   *  fully resolved, uid would be null, the initial rank/leaderboard
+   *  fetch would be silently skipped via an early return, and — since
+   *  the effect's deps never changed — it would never retry on its
+   *  own. A full page reload was the only thing that gave it another
+   *  chance, which matches "rank doesn't show until 2-3 refreshes"
+   *  exactly. Now there's only one source of truth for the signed-in
+   *  uid in the whole app, not two that could disagree.
+   */
+  currentUid: string;
   /** True only for a genuinely fresh device/browser with no local save
    *  for this account — gates whether a cloud restore is attempted. */
   hadNoLocalSaveAtBoot: boolean;
@@ -37,7 +71,7 @@ interface UseCloudSyncParams {
  */
 export function useCloudSync(params: UseCloudSyncParams) {
   const {
-    hadNoLocalSaveAtBoot, businessesByDistrict, stats, avatarEmoji, playerName,
+    currentUid, hadNoLocalSaveAtBoot, businessesByDistrict, stats, avatarEmoji, playerName,
     currentDistrictId, unlockedDistrictsMap, rewardedDistrictsMap,
     setBusinessesByDistrict, setStats, setAvatarEmoji, setPlayerName, restoreDistrictState,
   } = params;
@@ -81,7 +115,7 @@ export function useCloudSync(params: UseCloudSyncParams) {
   // app to ever see their friend's signup credited, even if they'd
   // been sitting in the app the whole time it happened.
   const checkForReferralCredits = () => {
-    const uid = auth.currentUser?.uid ?? null;
+    const uid = currentUid;
     if (!uid) return;
     SaveService.fetchUnclaimedReferrals(uid).then((unclaimed) => {
       if (unclaimed.length === 0) return;
@@ -122,7 +156,7 @@ export function useCloudSync(params: UseCloudSyncParams) {
 
   useEffect(() => {
     let cancelled = false;
-    const uid = auth.currentUser?.uid ?? null;
+    const uid = currentUid;
     cloudUidRef.current = uid;
     if (!uid) return;
 
@@ -234,13 +268,13 @@ export function useCloudSync(params: UseCloudSyncParams) {
         totalLevelSum: getTotalLevelSum(bbd),
       });
       SaveService.fetchTopLeaderboard(20).then(setRealLeaderboard);
-      SaveService.fetchMyRank(currentStats.profitPerMin).then(setMyRealRank);
+      fetchWithRetry(() => SaveService.fetchMyRank(currentStats.profitPerMin)).then(setMyRealRank);
       SaveService.fetchTopWeeklyContest(getContestWeekId(), 20).then(setWeeklyContestBoard);
-      SaveService.fetchMyWeeklyRank(getContestWeekId(), currentStats.weeklyPoints).then(setMyWeeklyRank);
+      fetchWithRetry(() => SaveService.fetchMyWeeklyRank(getContestWeekId(), currentStats.weeklyPoints)).then(setMyWeeklyRank);
       setLastLeaderboardFetchAt(Date.now());
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [currentUid]);
 
   useEffect(() => {
     // Fast interval — cloudSave + the leaderboard entry push are both

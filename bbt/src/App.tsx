@@ -663,6 +663,7 @@ function AppInner({ currentUid }: { currentUid: string }) {
   // feature needing a real answer to "which save wins," which deserves
   // its own careful, tested pass rather than being bundled in here.
   const { cloudUidRef, realLeaderboard, myRealRank, isBrandNewPlayer, weeklyContestBoard, myWeeklyRank, lastLeaderboardFetchAt, referralCreditsJustEarned, clearReferralCreditsJustEarned, signupReferralBonusEarned, clearSignupReferralBonusEarned } = useCloudSync({
+    currentUid,
     hadNoLocalSaveAtBoot: hadNoLocalSaveAtBootRef.current,
     businessesByDistrict, stats, avatarEmoji, playerName, currentDistrictId,
     unlockedDistrictsMap, rewardedDistrictsMap,
@@ -740,10 +741,31 @@ function AppInner({ currentUid }: { currentUid: string }) {
   }, [tutorialPending, milestone, streakWheelState]);
 
   // GAME LOOP (Pool ticks every 1 second; cash is frozen until claimed)
+  //
+  // lastTickAtRef tracks the real wall-clock time of the previous tick,
+  // not just a tick counter — this is the actual fix for a real,
+  // reported bug: the previous version added a flat profitPerMin/60 on
+  // every interval firing, silently assuming each firing represented
+  // exactly one real second. Browsers do not honor that assumption —
+  // setInterval is heavily throttled in backgrounded/minimized tabs
+  // (sometimes to once a minute or less), and any single slow frame on
+  // a loaded device can delay a firing outright. Every throttled or
+  // delayed tick under the old logic meant real elapsed profit was
+  // silently never added — invisible in the moment, but the reason a
+  // refresh (which recomputes the pool from real timestamps from
+  // scratch) always showed a truthfully higher number than what had
+  // been ticking on screen. Measuring real elapsed time on every firing,
+  // however irregular, means the pool always catches up to the correct
+  // value regardless of how the browser actually schedules the timer.
+  const lastTickAtRef = useRef(Date.now());
   useEffect(() => {
     const tickInterval = setInterval(() => {
+      const now = Date.now();
+      const realElapsedSeconds = (now - lastTickAtRef.current) / 1000;
+      lastTickAtRef.current = now;
+
       setStats((prev) => {
-        const profitPerSec = prev.profitPerMin / 60;
+        const profitThisTick = (prev.profitPerMin / 60) * realElapsedSeconds;
 
         // Pool is now the ONLY thing ticking — cash itself is frozen
         // until the player taps Claim (Header pill or Portfolio). Capped
@@ -759,12 +781,12 @@ function AppInner({ currentUid }: { currentUid: string }) {
         // design, encouraging a real but forgiving check-in rhythm.
         const districtCeiling = getDistrictTotalCost(currentDistrictIdRef.current) * progressionConfig.poolCeilingRatio;
         const poolCap = Math.min(districtCeiling, prev.profitPerMin * progressionConfig.poolCapMinutes);
-        const nextPool = Math.min(poolCap, prev.poolCash + profitPerSec);
+        const nextPool = Math.min(poolCap, prev.poolCash + profitThisTick);
 
         return {
           ...prev,
           poolCash: nextPool,
-          totalPlayTimeSeconds: prev.totalPlayTimeSeconds + 1,
+          totalPlayTimeSeconds: prev.totalPlayTimeSeconds + Math.round(realElapsedSeconds),
         };
       });
     }, 1000);
